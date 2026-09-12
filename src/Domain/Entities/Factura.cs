@@ -135,6 +135,9 @@ public class Factura : BaseAuditableEntity
         
             // Delegamos toda la información del adquirente al objeto compuesto
             Cliente = cliente,
+            TipoIdentificacionComprador = cliente.TipoIdentificacion,
+            RazonSocialComprador = cliente.RazonSocial,
+            IdentificacionComprador = cliente.Identificacion,
             _detalles = detalles,
             ClaveAcceso = string.Empty
         };

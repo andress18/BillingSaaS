@@ -113,22 +113,34 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
         var xmlFirmadoDoc = _signatureService.FirmarXml(xmlSinFirma, emisor.CertificadoDigital!, emisor.PasswordCertificado!);
         byte[] xmlFirmadoBytes = Encoding.UTF8.GetBytes(xmlFirmadoDoc.OuterXml);
 
-        // 7. Transmisión al Web Service de Recepción del SRI
-        var recepcionResult = await _recepcionService.ValidarComprobanteAsync(xmlFirmadoBytes, emisor.Ambiente, cancellationToken);
-
+        // 7. Transmisión al Web Service de Recepción del SRI (con manejo de contingencia)
         string? mensajeDevolucion = null;
-        if (recepcionResult.EsRecibida)
-        {
-            factura.MarcarComoRecibida();
-        }
-        else
-        {
-            var mensajes = recepcionResult.Comprobantes
-                .SelectMany(c => c.Mensajes)
-                .Select(m => $"[{m.Tipo}] ({m.Identificador}): {m.Mensaje} {m.InformacionAdicional}")
-                .ToList();
+        bool esRecibida = false;
 
-            mensajeDevolucion = string.Join(" | ", mensajes);
+        try
+        {
+            var recepcionResult = await _recepcionService.ValidarComprobanteAsync(xmlFirmadoBytes, emisor.Ambiente, cancellationToken);
+            esRecibida = recepcionResult.EsRecibida;
+
+            if (recepcionResult.EsRecibida)
+            {
+                factura.MarcarComoRecibida();
+            }
+            else
+            {
+                var mensajes = recepcionResult.Comprobantes
+                    .SelectMany(c => c.Mensajes)
+                    .Select(m => $"[{m.Tipo}] ({m.Identificador}): {m.Mensaje} {m.InformacionAdicional}")
+                    .ToList();
+
+                mensajeDevolucion = string.Join(" | ", mensajes);
+                factura.MarcarComoDevuelta(mensajeDevolucion);
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            // Si el servidor del SRI no responde (caída de celcer / reset de conexión), la factura queda generada, firmada y guardada localmente
+            mensajeDevolucion = $"Servidor SRI no disponible temporalmente: {ex.Message}. El comprobante quedó firmado y listo para reintento.";
             factura.MarcarComoDevuelta(mensajeDevolucion);
         }
 
@@ -142,7 +154,7 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
             ClaveAcceso = factura.ClaveAcceso,
             Secuencial = $"{emisor.CodigoEstablecimiento}-{emisor.PuntoEmision}-{secuencial}",
             Estado = factura.Estado,
-            EsRecibida = recepcionResult.EsRecibida,
+            EsRecibida = esRecibida,
             MensajeDevolucion = mensajeDevolucion
         };
     }

@@ -53,15 +53,33 @@ public static class DependencyInjection
         builder.Services.AddTransient<IFacturaXmlGenerator, FacturaXmlGenerator>();
         builder.Services.AddTransient<ISriSignatureService, SriSignatureService>();
 
-        // Clientes SOAP SRI con HttpClient tipado
+        // Clientes SOAP SRI con HttpClient tipado y protocolo TLS 1.2 explícito para servidores estatales
         builder.Services.AddHttpClient<ISriRecepcionService, SriRecepcionService>(client =>
         {
-            client.Timeout = TimeSpan.FromSeconds(45);
+            client.Timeout = TimeSpan.FromSeconds(60);
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        {
+            SslOptions = new System.Net.Security.SslClientAuthenticationOptions
+            {
+                EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13
+            },
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+            EnableMultipleHttp2Connections = false
         });
 
         builder.Services.AddHttpClient<ISriAutorizacionService, SriAutorizacionService>(client =>
         {
-            client.Timeout = TimeSpan.FromSeconds(45);
+            client.Timeout = TimeSpan.FromSeconds(60);
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        {
+            SslOptions = new System.Net.Security.SslClientAuthenticationOptions
+            {
+                EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13
+            },
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+            EnableMultipleHttp2Connections = false
         });
     }
 }
