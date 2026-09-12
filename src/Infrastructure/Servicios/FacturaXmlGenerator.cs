@@ -1,12 +1,13 @@
 using System.Globalization;
 using System.Xml.Linq;
+using BillingSaaS.Application.Common.Interfaces;
 using BillingSaaS.Domain.Entities;
 
 // Ajusta al namespace de tus entidades
 
 namespace BillingSaaS.Infrastructure.Servicios;
 
-public class FacturaXmlGenerator
+public class FacturaXmlGenerator : IFacturaXmlGenerator
 {
     // Tu RUC como proveedor de software (Requisito Anexo 26)
     private readonly string _rucProveedor;

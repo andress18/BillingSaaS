@@ -1,29 +1,17 @@
+using System.Text;
+using BillingSaaS.Application.Common.Exceptions;
 using BillingSaaS.Application.Common.Interfaces;
 using BillingSaaS.Domain.Entities;
 using BillingSaaS.Domain.Services;
 
 namespace BillingSaaS.Application.Facturas.Commands.EmitirFactura;
 
-public record EmitirFacturaCommand : IRequest<string>
+public record EmitirFacturaCommand : IRequest<EmitirFacturaResponseDto>
 {
-    public Guid TenantId { get; set; }
-    public int Ambiente { get; set; }
-    public int TipoEmision { get; set; }
-    public string Establecimiento { get; set; } = null!;
-    public string PuntoEmision { get; set; } = null!;
-    public string Secuencial { get; set; } = null!;
+    public int EmisorId { get; init; }
+    public CompradorDto Cliente { get; init; } = null!;
+    public List<DetalleDto> Detalles { get; init; } = new();
 
-    // Datos obligatorios del EMISOR[cite: 1]
-    public string RucEmisor { get; set; } = null!;
-    public string RazonSocialEmisor { get; set; } = null!;
-    public string DireccionMatrizEmisor { get; set; } = null!;
-
-    public DateTime FechaEmision { get; set; }
-
-    public CompradorDto Cliente { get; set; } = null!;
-    public List<DetalleDto> Detalles { get; set; } = new();
-
-    // DTOs anidados para mapear el JSON de entrada
     public record CompradorDto(
         string TipoIdentificacion,
         string Identificacion,
@@ -42,18 +30,41 @@ public record EmitirFacturaCommand : IRequest<string>
     public record ImpuestoDto(string Codigo, string CodigoPorcentaje, decimal Tarifa, decimal BaseImponible);
 }
 
-public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand, string>
+public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand, EmitirFacturaResponseDto>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IFacturaXmlGenerator _xmlGenerator;
+    private readonly ISriSignatureService _signatureService;
+    private readonly ISriRecepcionService _recepcionService;
 
-    public EmitirFacturaCommandHandler(IApplicationDbContext context)
+    public EmitirFacturaCommandHandler(
+        IApplicationDbContext context,
+        IFacturaXmlGenerator xmlGenerator,
+        ISriSignatureService signatureService,
+        ISriRecepcionService recepcionService)
     {
         _context = context;
+        _xmlGenerator = xmlGenerator;
+        _signatureService = signatureService;
+        _recepcionService = recepcionService;
     }
 
-    public async Task<string> Handle(EmitirFacturaCommand request, CancellationToken cancellationToken)
+    public async Task<EmitirFacturaResponseDto> Handle(EmitirFacturaCommand request, CancellationToken cancellationToken)
     {
-        // 1. Convertimos los DTOs crudos en objetos de Dominio validados
+        // 1. Obtener Emisor configurado desde la base de datos
+        var emisor = await _context.Emisores.FindAsync([request.EmisorId], cancellationToken);
+        Guard.Against.NotFound(request.EmisorId, emisor);
+
+        if (!emisor.Activo)
+            throw new InvalidOperationException("El emisor se encuentra inactivo.");
+
+        if (!emisor.TieneCertificadoValido())
+            throw new InvalidOperationException("El emisor no tiene un certificado digital válido configurado o ya ha caducado.");
+
+        // 2. Obtener siguiente número secuencial atómico
+        var secuencial = emisor.ObtenerSiguienteSecuencialFactura();
+
+        // 3. Crear objetos de valor de Dominio (Comprador, Detalles e Impuestos)
         var comprador = Comprador.Crear(
             request.Cliente.TipoIdentificacion,
             request.Cliente.Identificacion,
@@ -71,34 +82,68 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
             d.Impuestos.Select(i => Impuesto.Crear(i.Codigo, i.CodigoPorcentaje, i.Tarifa, i.BaseImponible)).ToList()
         )).ToList();
 
-        // 2. Creamos la entidad Raíz inyectando los datos del EMISOR y los objetos compuestos (comprador/detalles)
-        var entity = Factura.Crear(
-            request.TenantId,
-            request.Ambiente,
-            request.RazonSocialEmisor,     // Dato del Emisor (Farmacia)
-            request.RucEmisor,             // Dato del Emisor (Farmacia)
-            request.Establecimiento,
-            request.PuntoEmision,
-            request.Secuencial,
-            request.DireccionMatrizEmisor, // Dato del Emisor (Farmacia)
-            request.FechaEmision,
-            comprador,                     // Objeto validado del Cliente
-            detalles                       // Lista validada de Productos
+        // 4. Crear entidad Factura en el huso horario oficial de Ecuador (UTC-5)
+        var fechaEmision = DateTime.UtcNow.AddHours(-5).Date;
+
+        var factura = Factura.Crear(
+            tenantId: emisor.TenantId,
+            ambiente: emisor.Ambiente,
+            razonSocial: emisor.RazonSocial,
+            rucEmisor: emisor.Ruc,
+            establecimiento: emisor.CodigoEstablecimiento,
+            puntoEmision: emisor.PuntoEmision,
+            secuencial: secuencial,
+            direccionMatriz: emisor.DireccionMatriz,
+            fechaEmision: fechaEmision,
+            cliente: comprador,
+            detalles: detalles,
+            emisorId: emisor.Id
         );
 
-        // 3. Construcción de la cadena base y cálculo del dígito verificador
-        string fechaFormato = request.FechaEmision.ToString("ddMMyyyy");
-        string codigoNumerico = "12345678";
-        string cadenaBase = $"{fechaFormato}01{request.RucEmisor}{request.Ambiente}{request.Establecimiento}{request.PuntoEmision}{request.Secuencial}{codigoNumerico}{request.TipoEmision}";
-
+        // 5. Generar Clave de Acceso de 49 dígitos con Módulo 11
+        string fechaFormato = fechaEmision.ToString("ddMMyyyy");
+        string codigoNumerico = Random.Shared.Next(10000000, 99999999).ToString();
+        string tipoEmision = "1";
+        string cadenaBase = $"{fechaFormato}01{emisor.Ruc}{emisor.Ambiente}{emisor.CodigoEstablecimiento}{emisor.PuntoEmision}{secuencial}{codigoNumerico}{tipoEmision}";
         string claveAcceso = ClaveAccesoService.GenerarDigitoVerificador(cadenaBase);
-        entity.AsignarClaveAcceso(claveAcceso);
+        factura.AsignarClaveAcceso(claveAcceso);
 
-        _context.Facturas.Add(entity);
+        // 6. Generar y Firmar XML v1.1.0 con XAdES-BES
+        var xmlSinFirma = _xmlGenerator.GenerarXml(factura);
+        var xmlFirmadoDoc = _signatureService.FirmarXml(xmlSinFirma, emisor.CertificadoDigital!, emisor.PasswordCertificado!);
+        byte[] xmlFirmadoBytes = Encoding.UTF8.GetBytes(xmlFirmadoDoc.OuterXml);
 
-        // 4. Guardado y disparo de Eventos de Dominio
+        // 7. Transmisión al Web Service de Recepción del SRI
+        var recepcionResult = await _recepcionService.ValidarComprobanteAsync(xmlFirmadoBytes, emisor.Ambiente, cancellationToken);
+
+        string? mensajeDevolucion = null;
+        if (recepcionResult.EsRecibida)
+        {
+            factura.MarcarComoRecibida();
+        }
+        else
+        {
+            var mensajes = recepcionResult.Comprobantes
+                .SelectMany(c => c.Mensajes)
+                .Select(m => $"[{m.Tipo}] ({m.Identificador}): {m.Mensaje} {m.InformacionAdicional}")
+                .ToList();
+
+            mensajeDevolucion = string.Join(" | ", mensajes);
+            factura.MarcarComoDevuelta(mensajeDevolucion);
+        }
+
+        // 8. Persistencia de la factura y secuencial del emisor
+        _context.Facturas.Add(factura);
         await _context.SaveChangesAsync(cancellationToken);
 
-        return entity.ClaveAcceso;
+        return new EmitirFacturaResponseDto
+        {
+            FacturaId = factura.Id,
+            ClaveAcceso = factura.ClaveAcceso,
+            Secuencial = $"{emisor.CodigoEstablecimiento}-{emisor.PuntoEmision}-{secuencial}",
+            Estado = factura.Estado,
+            EsRecibida = recepcionResult.EsRecibida,
+            MensajeDevolucion = mensajeDevolucion
+        };
     }
 }
