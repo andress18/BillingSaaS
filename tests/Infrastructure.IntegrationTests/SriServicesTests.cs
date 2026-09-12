@@ -264,7 +264,7 @@ public class SriServicesTests
         capturedRequest.RequestUri!.ToString().ShouldBe(SriEndpoints.AutorizacionProduccion);
         capturedBody.ShouldNotBeNull();
         capturedBody.ShouldContain("<ec:autorizacionComprobante>");
-        capturedBody.ShouldContain($"<claveAcceso>{claveAcceso}</claveAcceso>");
+        capturedBody.ShouldContain($"<claveAccesoComprobante>{claveAcceso}</claveAccesoComprobante>");
         resultado.ClaveAccesoConsultada.ShouldBe(claveAcceso);
     }
 

@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Xml.Linq;
 using BillingSaaS.Domain.Entities;
 
@@ -9,7 +9,12 @@ namespace BillingSaaS.Infrastructure.Servicios;
 public class FacturaXmlGenerator
 {
     // Tu RUC como proveedor de software (Requisito Anexo 26)
-    private readonly string _rucProveedor = "1790000000001";
+    private readonly string _rucProveedor;
+
+    public FacturaXmlGenerator(string rucProveedor = "1790000000001")
+    {
+        _rucProveedor = string.IsNullOrWhiteSpace(rucProveedor) ? "1790000000001" : rucProveedor;
+    }
 
     public XDocument GenerarXml(Factura factura)
     {
@@ -67,7 +72,14 @@ public class FacturaXmlGenerator
                         )
                     ),
                     new XElement("importeTotal", factura.ImporteTotal.ToString("0.00", format)),
-                    new XElement("moneda", "DOLAR") // Moneda obligatoria por defecto[cite: 1]
+                    new XElement("moneda", "DOLAR"), // Moneda obligatoria por defecto
+                    // 2.1 Bloque PAGOS obligatorio por el SRI v1.1.0
+                    new XElement("pagos",
+                        new XElement("pago",
+                            new XElement("formaPago", "01"), // 01: Sin utilización del sistema financiero
+                            new XElement("total", factura.ImporteTotal.ToString("0.00", format))
+                        )
+                    )
                 ),
 
                 // 3. DETALLES DE PRODUCTOS

@@ -1,4 +1,7 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Cryptography.Xml;
@@ -25,28 +28,41 @@ namespace BillingSaaS.Infrastructure.Servicios
                 xmlDoc.Load(reader);
             }
 
-            // Inicializar SignedXml con el algoritmo RSA-SHA1[cite: 2]
-            var signedXml = new SignedXml(xmlDoc) { SigningKey = rsaKey };
+            // Identificadores consistentes para la firma XAdES-BES
+            var signatureId = $"Signature-{Guid.NewGuid():N}";
+            var keyInfoId = $"Certificate-{Guid.NewGuid():N}";
+            var signedPropertiesId = $"Signature-SignedProperties-{Guid.NewGuid():N}";
+            var objectId = $"Signature-Object-{Guid.NewGuid():N}";
+            var referenceComprobanteId = $"Reference-comprobante-{Guid.NewGuid():N}";
+
+            // Inicializar CustomSignedXml con soporte para resolución de IDs dentro de DataObject
+            var signedXml = new CustomSignedXml(xmlDoc) { SigningKey = rsaKey };
+            signedXml.Signature.Id = signatureId;
             signedXml.SignedInfo!.SignatureMethod = SignedXml.XmlDsigRSASHA1Url;
 
-            // Tipo de firma ENVELOPED referenciando el id 'comprobante'[cite: 2]
-            var reference = new Reference { Uri = "#comprobante" };
-            reference.AddTransform(new XmlDsigEnvelopedSignatureTransform());
-            reference.DigestMethod = SignedXml.XmlDsigSHA1Url; 
-            signedXml.AddReference(reference);
+            // 1. Referencia al documento comprobante (Enveloped) con Id para DataObjectFormat
+            var referenceComprobante = new Reference { Uri = "#comprobante", Id = referenceComprobanteId };
+            referenceComprobante.AddTransform(new XmlDsigEnvelopedSignatureTransform());
+            referenceComprobante.DigestMethod = SignedXml.XmlDsigSHA1Url;
+            signedXml.AddReference(referenceComprobante);
 
-            // Construcción del nodo KeyInfo conteniendo el certificado X509 en base64[cite: 2]
-            var keyInfo = new KeyInfo();
-            keyInfo.Id = $"Certificate-{Guid.NewGuid():N}";
+            // 2. Referencia a SignedProperties (Obligatoria para XAdES-BES)
+            var referenceSignedProps = new Reference { Uri = $"#{signedPropertiesId}" };
+            referenceSignedProps.Type = "http://uri.etsi.org/01903#SignedProperties";
+            referenceSignedProps.DigestMethod = SignedXml.XmlDsigSHA1Url;
+            signedXml.AddReference(referenceSignedProps);
+
+            // Construcción del nodo KeyInfo conteniendo el certificado X509 en base64
+            var keyInfo = new KeyInfo { Id = keyInfoId };
             keyInfo.AddClause(new KeyInfoX509Data(certificado));
-            
-            // Inyección del módulo y exponente RSA[cite: 2]
+
+            // Inyección del módulo y exponente RSA
             var rsaKeyValue = new RSAKeyValue(rsaKey);
             keyInfo.AddClause(rsaKeyValue);
             signedXml.KeyInfo = keyInfo;
 
-            // Inyección del nodo XAdES-BES (QualifyingProperties) versión 1.3.2[cite: 2]
-            var xadesObject = CrearNodoXadesBes(certificado, reference.Uri, keyInfo.Id);
+            // Inyección del nodo XAdES-BES (QualifyingProperties) versión 1.3.2
+            var xadesObject = CrearNodoXadesBes(certificado, signatureId, signedPropertiesId, objectId, referenceComprobanteId);
             signedXml.AddObject(xadesObject);
 
             signedXml.ComputeSignature();
@@ -57,36 +73,45 @@ namespace BillingSaaS.Infrastructure.Servicios
             return xmlDoc;
         }
 
-        private DataObject CrearNodoXadesBes(X509Certificate2 cert, string documentReferenceUri, string keyInfoId)
+        private DataObject CrearNodoXadesBes(
+            X509Certificate2 cert,
+            string signatureId,
+            string signedPropertiesId,
+            string objectId,
+            string referenceComprobanteId)
         {
-            // La fecha de la firma no debe ser posterior a la actual; se recomienda sincronizar con 0.south-america.pool.ntp.org[cite: 2]
-            var signingTime = DateTime.UtcNow.AddHours(-5).ToString("yyyy-MM-ddTHH:mm:sszzz");
+            // Fecha y hora oficial en zona horaria de Ecuador (UTC-5)
+            var ecuadorOffset = TimeSpan.FromHours(-5);
+            var signingTime = new DateTimeOffset(DateTime.UtcNow).ToOffset(ecuadorOffset).ToString("yyyy-MM-ddTHH:mm:sszzz");
 
             var certHash = cert.GetCertHash(HashAlgorithmName.SHA1);
             var certDigestBase64 = Convert.ToBase64String(certHash);
 
+            // Convertir número de serie hexadecimal a representación decimal exacta
+            var serialNumberDecimal = BigInteger.Parse("0" + cert.SerialNumber, NumberStyles.HexNumber).ToString();
+
             string xadesNamespace = "http://uri.etsi.org/01903/v1.3.2#";
 
             var xadesXml = $@"
-            <etsi:QualifyingProperties Target=""#Signature-{Guid.NewGuid():N}"" xmlns:etsi=""{xadesNamespace}"">
-                <etsi:SignedProperties Id=""Signature-SignedProperties"">
+            <etsi:QualifyingProperties Target=""#{signatureId}"" xmlns=""http://www.w3.org/2000/09/xmldsig#"" xmlns:etsi=""{xadesNamespace}"">
+                <etsi:SignedProperties Id=""{signedPropertiesId}"">
                     <etsi:SignedSignatureProperties>
                         <etsi:SigningTime>{signingTime}</etsi:SigningTime>
                         <etsi:SigningCertificate>
                             <etsi:Cert>
                                 <etsi:CertDigest>
-                                    <ds:DigestMethod Algorithm=""http://www.w3.org/2000/09/xmldsig#sha1"" xmlns:ds=""http://www.w3.org/2000/09/xmldsig#"" />
-                                    <ds:DigestValue xmlns:ds=""http://www.w3.org/2000/09/xmldsig#"">{certDigestBase64}</ds:DigestValue>
+                                    <DigestMethod Algorithm=""http://www.w3.org/2000/09/xmldsig#sha1"" />
+                                    <DigestValue>{certDigestBase64}</DigestValue>
                                 </etsi:CertDigest>
                                 <etsi:IssuerSerial>
-                                    <ds:X509IssuerName xmlns:ds=""http://www.w3.org/2000/09/xmldsig#"">{cert.Issuer}</ds:X509IssuerName>
-                                    <ds:X509SerialNumber xmlns:ds=""http://www.w3.org/2000/09/xmldsig#"">{GetDecimalSerialNumber(cert)}</ds:X509SerialNumber>
+                                    <X509IssuerName>{cert.Issuer}</X509IssuerName>
+                                    <X509SerialNumber>{serialNumberDecimal}</X509SerialNumber>
                                 </etsi:IssuerSerial>
                             </etsi:Cert>
                         </etsi:SigningCertificate>
                     </etsi:SignedSignatureProperties>
                     <etsi:SignedDataObjectProperties>
-                        <etsi:DataObjectFormat ObjectReference=""{documentReferenceUri}"">
+                        <etsi:DataObjectFormat ObjectReference=""#{referenceComprobanteId}"">
                             <etsi:Description>contenido comprobante</etsi:Description>
                             <etsi:MimeType>text/xml</etsi:MimeType>
                         </etsi:DataObjectFormat>
@@ -99,16 +124,59 @@ namespace BillingSaaS.Infrastructure.Servicios
 
             return new DataObject
             {
-                Id = $"Signature-Object-{Guid.NewGuid():N}",
+                Id = objectId,
                 Data = doc.DocumentElement?.SelectNodes(".")!
             };
         }
 
-        private string GetDecimalSerialNumber(X509Certificate2 cert)
+        private class CustomSignedXml : SignedXml
         {
-            var serialBytes = cert.GetSerialNumber();
-            Array.Reverse(serialBytes); 
-            return new System.Numerics.BigInteger(serialBytes).ToString();
+            private readonly List<DataObject> _customDataObjects = new();
+
+            public CustomSignedXml(XmlDocument document) : base(document) { }
+
+            public new void AddObject(DataObject dataObject)
+            {
+                base.AddObject(dataObject);
+                _customDataObjects.Add(dataObject);
+            }
+
+            public override XmlElement? GetIdElement(XmlDocument? document, string idValue)
+            {
+                if (string.IsNullOrEmpty(idValue)) return null;
+
+                var idElem = base.GetIdElement(document, idValue);
+                if (idElem != null) return idElem;
+
+                if (KeyInfo != null && KeyInfo.Id == idValue)
+                {
+                    return KeyInfo.GetXml();
+                }
+
+                if (document != null)
+                {
+                    var node = document.SelectSingleNode($"//*[@Id='{idValue}' or @id='{idValue}']");
+                    if (node is XmlElement el) return el;
+                }
+
+                foreach (var dataObject in _customDataObjects)
+                {
+                    if (dataObject.Data != null)
+                    {
+                        foreach (XmlNode node in dataObject.Data)
+                        {
+                            if (node is XmlElement el && (el.GetAttribute("Id") == idValue || el.GetAttribute("id") == idValue))
+                                return el;
+
+                            var subNode = node.SelectSingleNode($"//*[@Id='{idValue}' or @id='{idValue}']");
+                            if (subNode is XmlElement subEl)
+                                return subEl;
+                        }
+                    }
+                }
+
+                return null;
+            }
         }
     }
 }

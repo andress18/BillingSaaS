@@ -13,7 +13,7 @@ var web = builder.AddProject<Projects.Web>(Services.WebApi)
     .WaitFor(databaseServer)
     .WithExternalHttpEndpoints()
     .WithAspNetCoreEnvironment()
-    .WithUrlForEndpoint("http", url =>
+.WithUrlForEndpoint("http", url =>
     {
         url.DisplayText = "Scalar API Reference";
         url.Url = "/scalar";
