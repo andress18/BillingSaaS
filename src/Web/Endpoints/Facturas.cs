@@ -1,4 +1,6 @@
+using BillingSaaS.Application.Common.Models.Sri;
 using BillingSaaS.Application.Facturas.Commands.EmitirFactura;
+using BillingSaaS.Application.Facturas.Queries.ConsultarAutorizacionFactura;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace BillingSaaS.Web.Endpoints;
@@ -7,9 +9,8 @@ public class Facturas : IEndpointGroup
 {
     public static void Map(RouteGroupBuilder groupBuilder)
     {
-        groupBuilder.RequireAuthorization();
-
         groupBuilder.MapPost(EmitirFactura);
+        groupBuilder.MapGet(ConsultarAutorizacion, "{claveAcceso}/autorizacion");
     }
 
     [EndpointSummary("Emitir y firmar Factura Electrónica SRI")]
@@ -17,6 +18,15 @@ public class Facturas : IEndpointGroup
     public static async Task<Ok<EmitirFacturaResponseDto>> EmitirFactura(ISender sender, EmitirFacturaCommand command)
     {
         var response = await sender.Send(command);
+
+        return TypedResults.Ok(response);
+    }
+
+    [EndpointSummary("Consultar Autorización en el SRI")]
+    [EndpointDescription("Consulta el estado de autorización de un comprobante electrónico en los servidores del SRI a partir de su clave de acceso.")]
+    public static async Task<Ok<SriAutorizacionResponseDto>> ConsultarAutorizacion(ISender sender, string claveAcceso)
+    {
+        var response = await sender.Send(new ConsultarAutorizacionFacturaQuery(claveAcceso));
 
         return TypedResults.Ok(response);
     }
