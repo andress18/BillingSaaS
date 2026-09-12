@@ -29,7 +29,7 @@ public class SriAutorizacionService : ISriAutorizacionService
     <soapenv:Header/>
     <soapenv:Body>
         <ec:autorizacionComprobante>
-            <claveAcceso>{claveAcceso}</claveAcceso>
+            <claveAccesoComprobante>{claveAcceso}</claveAccesoComprobante>
         </ec:autorizacionComprobante>
     </soapenv:Body>
 </soapenv:Envelope>";
@@ -65,64 +65,57 @@ public class SriAutorizacionService : ISriAutorizacionService
 
         var doc = XDocument.Parse(responseXml);
 
-        var respuestaNode = doc.Descendants().FirstOrDefault(e => e.Name.LocalName == "RespuestaAutorizacion");
-        if (respuestaNode == null)
+        var fault = doc.Descendants().FirstOrDefault(e => e.Name.LocalName.Equals("Fault", StringComparison.OrdinalIgnoreCase));
+        if (fault != null)
         {
-            var fault = doc.Descendants().FirstOrDefault(e => e.Name.LocalName == "Fault");
-            if (fault != null)
+            var faultString = fault.Descendants().FirstOrDefault(e => e.Name.LocalName.Equals("faultstring", StringComparison.OrdinalIgnoreCase))?.Value;
+            result.Autorizaciones.Add(new SriAutorizacionDto
             {
-                var faultString = fault.Descendants().FirstOrDefault(e => e.Name.LocalName == "faultstring")?.Value;
-                result.Autorizaciones.Add(new SriAutorizacionDto
+                Estado = "ERROR",
+                Mensajes = new List<SriMensajeDto>
                 {
-                    Estado = "ERROR",
-                    Mensajes = new List<SriMensajeDto>
-                    {
-                        new() { Identificador = "SOAP_FAULT", Mensaje = faultString ?? "Error SOAP desconocido", Tipo = "ERROR" }
-                    }
-                });
-            }
+                    new() { Identificador = "SOAP_FAULT", Mensaje = faultString ?? "Error SOAP desconocido", Tipo = "ERROR" }
+                }
+            });
             return result;
         }
 
-        result.ClaveAccesoConsultada = respuestaNode.Elements().FirstOrDefault(e => e.Name.LocalName == "claveAccesoConsultada")?.Value ?? string.Empty;
-        result.NumeroComprobantes = respuestaNode.Elements().FirstOrDefault(e => e.Name.LocalName == "numeroComprobantes")?.Value ?? string.Empty;
+        result.ClaveAccesoConsultada = doc.Descendants().FirstOrDefault(e => e.Name.LocalName.Equals("claveAccesoConsultada", StringComparison.OrdinalIgnoreCase))?.Value ?? string.Empty;
+        result.NumeroComprobantes = doc.Descendants().FirstOrDefault(e => e.Name.LocalName.Equals("numeroComprobantes", StringComparison.OrdinalIgnoreCase))?.Value ?? string.Empty;
 
-        var autorizacionesNode = respuestaNode.Elements().FirstOrDefault(e => e.Name.LocalName == "autorizaciones");
-        if (autorizacionesNode != null)
+        var autNodes = doc.Descendants().Where(e => e.Name.LocalName.Equals("autorizacion", StringComparison.OrdinalIgnoreCase));
+        foreach (var autNode in autNodes)
         {
-            foreach (var autNode in autorizacionesNode.Elements().Where(e => e.Name.LocalName == "autorizacion"))
+            var autDto = new SriAutorizacionDto
             {
-                var autDto = new SriAutorizacionDto
-                {
-                    Estado = autNode.Elements().FirstOrDefault(e => e.Name.LocalName == "estado")?.Value ?? string.Empty,
-                    NumeroAutorizacion = autNode.Elements().FirstOrDefault(e => e.Name.LocalName == "numeroAutorizacion")?.Value,
-                    Ambiente = autNode.Elements().FirstOrDefault(e => e.Name.LocalName == "ambiente")?.Value,
-                    ComprobanteXml = autNode.Elements().FirstOrDefault(e => e.Name.LocalName == "comprobante")?.Value
-                };
+                Estado = autNode.Elements().FirstOrDefault(e => e.Name.LocalName.Equals("estado", StringComparison.OrdinalIgnoreCase))?.Value ?? string.Empty,
+                NumeroAutorizacion = autNode.Elements().FirstOrDefault(e => e.Name.LocalName.Equals("numeroAutorizacion", StringComparison.OrdinalIgnoreCase))?.Value,
+                Ambiente = autNode.Elements().FirstOrDefault(e => e.Name.LocalName.Equals("ambiente", StringComparison.OrdinalIgnoreCase))?.Value,
+                ComprobanteXml = autNode.Elements().FirstOrDefault(e => e.Name.LocalName.Equals("comprobante", StringComparison.OrdinalIgnoreCase))?.Value
+            };
 
-                var fechaStr = autNode.Elements().FirstOrDefault(e => e.Name.LocalName == "fechaAutorizacion")?.Value;
-                if (!string.IsNullOrWhiteSpace(fechaStr) && DateTime.TryParse(fechaStr, CultureInfo.InvariantCulture, DateTimeStyles.None, out var fecha))
-                {
-                    autDto.FechaAutorizacion = fecha;
-                }
-
-                var mensajesNode = autNode.Elements().FirstOrDefault(e => e.Name.LocalName == "mensajes");
-                if (mensajesNode != null)
-                {
-                    foreach (var msgNode in mensajesNode.Elements().Where(e => e.Name.LocalName == "mensaje"))
-                    {
-                        autDto.Mensajes.Add(new SriMensajeDto
-                        {
-                            Identificador = msgNode.Elements().FirstOrDefault(e => e.Name.LocalName == "identificador")?.Value ?? string.Empty,
-                            Mensaje = msgNode.Elements().FirstOrDefault(e => e.Name.LocalName == "mensaje")?.Value ?? string.Empty,
-                            InformacionAdicional = msgNode.Elements().FirstOrDefault(e => e.Name.LocalName == "informacionAdicional")?.Value,
-                            Tipo = msgNode.Elements().FirstOrDefault(e => e.Name.LocalName == "tipo")?.Value ?? string.Empty
-                        });
-                    }
-                }
-
-                result.Autorizaciones.Add(autDto);
+            var fechaStr = autNode.Elements().FirstOrDefault(e => e.Name.LocalName.Equals("fechaAutorizacion", StringComparison.OrdinalIgnoreCase))?.Value;
+            if (!string.IsNullOrWhiteSpace(fechaStr) && DateTime.TryParse(fechaStr, CultureInfo.InvariantCulture, DateTimeStyles.None, out var fecha))
+            {
+                autDto.FechaAutorizacion = fecha;
             }
+
+            var mensajesNode = autNode.Elements().FirstOrDefault(e => e.Name.LocalName.Equals("mensajes", StringComparison.OrdinalIgnoreCase));
+            if (mensajesNode != null)
+            {
+                foreach (var msgNode in mensajesNode.Elements().Where(e => e.Name.LocalName.Equals("mensaje", StringComparison.OrdinalIgnoreCase)))
+                {
+                    autDto.Mensajes.Add(new SriMensajeDto
+                    {
+                        Identificador = msgNode.Elements().FirstOrDefault(e => e.Name.LocalName.Equals("identificador", StringComparison.OrdinalIgnoreCase))?.Value ?? string.Empty,
+                        Mensaje = msgNode.Elements().FirstOrDefault(e => e.Name.LocalName.Equals("mensaje", StringComparison.OrdinalIgnoreCase))?.Value ?? string.Empty,
+                        InformacionAdicional = msgNode.Elements().FirstOrDefault(e => e.Name.LocalName.Equals("informacionAdicional", StringComparison.OrdinalIgnoreCase))?.Value,
+                        Tipo = msgNode.Elements().FirstOrDefault(e => e.Name.LocalName.Equals("tipo", StringComparison.OrdinalIgnoreCase))?.Value ?? string.Empty
+                    });
+                }
+            }
+
+            result.Autorizaciones.Add(autDto);
         }
 
         return result;
