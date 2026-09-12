@@ -1,3 +1,5 @@
+namespace BillingSaaS.AppHost;
+
 internal static class AspireExtensions
 {
     public static IResourceBuilder<T> WithAspNetCoreEnvironment<T>(this IResourceBuilder<T> builder) 

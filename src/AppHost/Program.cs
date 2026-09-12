@@ -1,3 +1,4 @@
+using BillingSaaS.AppHost;
 using BillingSaaS.Shared;
 
 var builder = DistributedApplication.CreateBuilder(args);

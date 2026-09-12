@@ -1,4 +1,4 @@
-﻿namespace BillingSaaS.Application.Factura.Commands.EmitirFactura;
+﻿namespace BillingSaaS.Application.Facturas.Commands.EmitirFactura;
 
 public class EmitirFacturaCommandValidator : AbstractValidator<EmitirFacturaCommand>
 {

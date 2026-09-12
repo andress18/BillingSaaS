@@ -1,14 +1,17 @@
-﻿using BillingSaaS.Application.Common.Interfaces;
+using BillingSaaS.Application.Common.Interfaces;
 using BillingSaaS.Infrastructure.Data;
 using BillingSaaS.Infrastructure.Data.Interceptors;
 using BillingSaaS.Infrastructure.Identity;
+using BillingSaaS.Infrastructure.Servicios;
+using BillingSaaS.Infrastructure.Servicios.Sri;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace Microsoft.Extensions.DependencyInjection;
+namespace BillingSaaS.Infrastructure;
 
 public static class DependencyInjection
 {
@@ -45,5 +48,20 @@ public static class DependencyInjection
 
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddTransient<IIdentityService, IdentityService>();
+
+        // Servicios de Facturación y Firma SRI
+        builder.Services.AddTransient<FacturaXmlGenerator>();
+        builder.Services.AddTransient<SriSignatureService>();
+
+        // Clientes SOAP SRI con HttpClient tipado
+        builder.Services.AddHttpClient<ISriRecepcionService, SriRecepcionService>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(45);
+        });
+
+        builder.Services.AddHttpClient<ISriAutorizacionService, SriAutorizacionService>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(45);
+        });
     }
 }

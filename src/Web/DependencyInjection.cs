@@ -1,10 +1,9 @@
 using Azure.Identity;
 using BillingSaaS.Application.Common.Interfaces;
-using BillingSaaS.Infrastructure.Data;
 using BillingSaaS.Web.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Microsoft.Extensions.DependencyInjection;
+namespace BillingSaaS.Web;
 
 public static class DependencyInjection
 {

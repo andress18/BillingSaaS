@@ -1,0 +1,35 @@
+using BillingSaaS.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace BillingSaaS.Infrastructure.Data.Configurations;
+
+public class FacturaConfiguration : IEntityTypeConfiguration<Factura>
+{
+    public void Configure(EntityTypeBuilder<Factura> builder)
+    {
+        builder.HasKey(f => f.Id);
+
+        builder.Property(f => f.RazonSocial)
+            .HasMaxLength(300)
+            .IsRequired();
+
+        builder.Property(f => f.Ruc)
+            .HasMaxLength(13)
+            .IsRequired();
+
+        builder.Property(f => f.ClaveAcceso)
+            .HasMaxLength(49)
+            .IsRequired();
+
+        builder.HasMany(f => f.Detalles)
+            .WithOne()
+            .HasForeignKey("FacturaId")
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(f => f.Cliente)
+            .WithMany()
+            .HasForeignKey("ClienteId");
+    }
+}
+

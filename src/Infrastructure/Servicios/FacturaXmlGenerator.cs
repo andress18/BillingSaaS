@@ -1,8 +1,10 @@
 ﻿using System.Globalization;
 using System.Xml.Linq;
-using BillingSaaS.Domain.Entities; // Ajusta al namespace de tus entidades
+using BillingSaaS.Domain.Entities;
 
-namespace BillingSaaS.Infrastructure.Services;
+// Ajusta al namespace de tus entidades
+
+namespace BillingSaaS.Infrastructure.Servicios;
 
 public class FacturaXmlGenerator
 {
@@ -36,7 +38,7 @@ public class FacturaXmlGenerator
                 new XElement("infoTributaria",
                     new XElement("ambiente", factura.Ambiente),
                     new XElement("tipoEmision", factura.TipoEmision),
-                    new XElement("razonSocial", factura.RazonSocialComprador),
+                    new XElement("razonSocial", factura.RazonSocial),
                     new XElement("ruc", factura.Ruc),
                     new XElement("claveAcceso", factura.ClaveAcceso),
                     new XElement("codDoc", "01"), // Código obligatorio para FACTURA[cite: 1]

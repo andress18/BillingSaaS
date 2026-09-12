@@ -1,4 +1,8 @@
+using BillingSaaS.Application;
+using BillingSaaS.Infrastructure;
 using BillingSaaS.Infrastructure.Data;
+using BillingSaaS.ServiceDefaults;
+using BillingSaaS.Web;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
