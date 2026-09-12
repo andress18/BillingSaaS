@@ -1,4 +1,4 @@
-﻿namespace BillingSaaS.Domain.Entities;
+namespace BillingSaaS.Domain.Entities;
 
 using System;
 using System.Collections.Generic;
@@ -8,6 +8,15 @@ public class Factura : BaseAuditableEntity
 {
     // 1. Aislamiento Multi-tenant (SaaS)
     public Guid TenantId { get; private set; }
+
+    // Relación con el Emisor
+    public int EmisorId { get; private set; }
+
+    // Estado del comprobante en el flujo SRI (CREADA, RECIBIDA, AUTORIZADA, DEVUELTA, NO_AUTORIZADA)
+    public string Estado { get; private set; } = "CREADA";
+    public string? NumeroAutorizacion { get; private set; }
+    public DateTime? FechaAutorizacion { get; private set; }
+    public string? MensajeErrorSri { get; private set; }
 
     // ==========================================
     // 1. INFORMACIÓN TRIBUTARIA (Cabecera)
@@ -106,11 +115,12 @@ public class Factura : BaseAuditableEntity
         Guid tenantId, int ambiente, string razonSocial, string rucEmisor, 
         string establecimiento, string puntoEmision, string secuencial, 
         string direccionMatriz, DateTime fechaEmision, Comprador cliente, 
-        List<DetalleFactura> detalles)
+        List<DetalleFactura> detalles, int emisorId = 0)
     {
         var factura = new Factura
         {
             TenantId = tenantId,
+            EmisorId = emisorId,
             Ambiente = ambiente,
             TipoEmision = 1, // Para el método de autorización offline, solo existe el tipo de emisión normal (1)[cite: 3].
             RazonSocial = razonSocial,
@@ -121,6 +131,7 @@ public class Factura : BaseAuditableEntity
             Secuencial = secuencial,
             DireccionMatriz = direccionMatriz,
             FechaEmision = fechaEmision,
+            Estado = "CREADA",
         
             // Delegamos toda la información del adquirente al objeto compuesto
             Cliente = cliente,
@@ -135,6 +146,35 @@ public class Factura : BaseAuditableEntity
         // factura.AddDomainEvent(new FacturaEmitidaEvent(factura));
 
         return factura;
+    }
+
+    public void MarcarComoRecibida()
+    {
+        Estado = "RECIBIDA";
+        MensajeErrorSri = null;
+    }
+
+    public void MarcarComoAutorizada(string numeroAutorizacion, DateTime fechaAutorizacion)
+    {
+        if (string.IsNullOrWhiteSpace(numeroAutorizacion))
+            throw new ArgumentException("El número de autorización es obligatorio.", nameof(numeroAutorizacion));
+
+        Estado = "AUTORIZADO";
+        NumeroAutorizacion = numeroAutorizacion;
+        FechaAutorizacion = fechaAutorizacion;
+        MensajeErrorSri = null;
+    }
+
+    public void MarcarComoDevuelta(string motivoError)
+    {
+        Estado = "DEVUELTA";
+        MensajeErrorSri = motivoError;
+    }
+
+    public void MarcarComoNoAutorizada(string motivoError)
+    {
+        Estado = "NO AUTORIZADO";
+        MensajeErrorSri = motivoError;
     }
 
     private void CalcularTotales()

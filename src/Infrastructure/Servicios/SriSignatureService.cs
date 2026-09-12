@@ -7,10 +7,11 @@ using System.Security.Cryptography.X509Certificates;
 using System.Security.Cryptography.Xml;
 using System.Xml;
 using System.Xml.Linq;
+using BillingSaaS.Application.Common.Interfaces;
 
 namespace BillingSaaS.Infrastructure.Servicios
 {
-    public class SriSignatureService
+    public class SriSignatureService : ISriSignatureService
     {
         public XmlDocument FirmarXml(XDocument xmlSinFirma, byte[] p12Bytes, string passwordP12)
         {

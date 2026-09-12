@@ -22,6 +22,21 @@ public class FacturaConfiguration : IEntityTypeConfiguration<Factura>
             .HasMaxLength(49)
             .IsRequired();
 
+        builder.Property(f => f.Estado)
+            .HasMaxLength(20)
+            .IsRequired();
+
+        builder.Property(f => f.NumeroAutorizacion)
+            .HasMaxLength(49);
+
+        builder.Property(f => f.MensajeErrorSri)
+            .HasMaxLength(1000);
+
+        builder.HasOne<Emisor>()
+            .WithMany()
+            .HasForeignKey(f => f.EmisorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasMany(f => f.Detalles)
             .WithOne()
             .HasForeignKey("FacturaId")

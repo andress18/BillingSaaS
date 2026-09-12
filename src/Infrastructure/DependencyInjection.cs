@@ -50,8 +50,8 @@ public static class DependencyInjection
         builder.Services.AddTransient<IIdentityService, IdentityService>();
 
         // Servicios de Facturación y Firma SRI
-        builder.Services.AddTransient<FacturaXmlGenerator>();
-        builder.Services.AddTransient<SriSignatureService>();
+        builder.Services.AddTransient<IFacturaXmlGenerator, FacturaXmlGenerator>();
+        builder.Services.AddTransient<ISriSignatureService, SriSignatureService>();
 
         // Clientes SOAP SRI con HttpClient tipado
         builder.Services.AddHttpClient<ISriRecepcionService, SriRecepcionService>(client =>
