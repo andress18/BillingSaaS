@@ -1,6 +1,8 @@
+using BillingSaaS.Application.Common.Models;
 using BillingSaaS.Application.Common.Models.Sri;
 using BillingSaaS.Application.Facturas.Commands.EmitirFactura;
 using BillingSaaS.Application.Facturas.Queries.ConsultarAutorizacionFactura;
+using BillingSaaS.Application.Facturas.Queries.GetFacturas;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace BillingSaaS.Web.Endpoints;
@@ -10,7 +12,17 @@ public class Facturas : IEndpointGroup
     public static void Map(RouteGroupBuilder groupBuilder)
     {
         groupBuilder.MapPost(EmitirFactura);
+        groupBuilder.MapGet(GetFacturas);
         groupBuilder.MapGet(ConsultarAutorizacion, "{claveAcceso}/autorizacion");
+    }
+
+    [EndpointSummary("Listar facturas electrónicas")]
+    [EndpointDescription("Obtiene un listado paginado y filtrado de las facturas emitidas por emisor, estado, comprador o rango de fechas.")]
+    public static async Task<Ok<PaginatedList<FacturaBriefDto>>> GetFacturas(ISender sender, [AsParameters] GetFacturasQuery query)
+    {
+        var response = await sender.Send(query);
+
+        return TypedResults.Ok(response);
     }
 
     [EndpointSummary("Emitir y firmar Factura Electrónica SRI")]
