@@ -35,14 +35,20 @@ public static class DependencyInjection
 
         builder.Services.AddScoped<ApplicationDbContextInitialiser>();
 
-        builder.Services.AddAuthentication()
-            .AddBearerToken(IdentityConstants.BearerScheme);
+        builder.Services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = IdentityConstants.BearerScheme;
+            options.DefaultChallengeScheme = IdentityConstants.BearerScheme;
+            options.DefaultScheme = IdentityConstants.BearerScheme;
+        })
+        .AddBearerToken(IdentityConstants.BearerScheme);
 
         builder.Services.AddAuthorizationBuilder();
 
         builder.Services
             .AddIdentityCore<ApplicationUser>()
             .AddRoles<IdentityRole>()
+            .AddClaimsPrincipalFactory<ApplicationUserClaimsPrincipalFactory>()
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddApiEndpoints();
 

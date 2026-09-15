@@ -1,8 +1,8 @@
-﻿namespace BillingSaaS.Application.Common.Interfaces;
+namespace BillingSaaS.Application.Common.Interfaces;
 
 public interface IUser
 {
     string? Id { get; }
     List<string>? Roles { get; }
-
+    Guid? TenantId { get; }
 }

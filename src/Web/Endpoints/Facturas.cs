@@ -11,6 +11,8 @@ public class Facturas : IEndpointGroup
 {
     public static void Map(RouteGroupBuilder groupBuilder)
     {
+        groupBuilder.RequireAuthorization();
+
         groupBuilder.MapPost(EmitirFactura);
         groupBuilder.MapGet(GetFacturas);
         groupBuilder.MapGet(ConsultarAutorizacion, "{claveAcceso}/autorizacion");

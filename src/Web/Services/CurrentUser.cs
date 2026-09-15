@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 
 using BillingSaaS.Application.Common.Interfaces;
 
@@ -15,5 +15,6 @@ public class CurrentUser : IUser
 
     public string? Id => _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
     public List<string>? Roles => _httpContextAccessor.HttpContext?.User?.FindAll(ClaimTypes.Role).Select(x => x.Value).ToList();
+    public Guid? TenantId => Guid.TryParse(_httpContextAccessor.HttpContext?.User?.FindFirstValue("tenant_id"), out var tid) ? tid : null;
 
 }

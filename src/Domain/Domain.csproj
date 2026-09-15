@@ -9,4 +9,8 @@
     <PackageReference Include="MediatR.Contracts" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Events\" />
+  </ItemGroup>
+
 </Project>

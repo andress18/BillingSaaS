@@ -4,9 +4,7 @@ namespace BillingSaaS.Application.Common.Interfaces;
 
 public interface IApplicationDbContext
 {
-    DbSet<TodoList> TodoLists { get; }
-
-    DbSet<TodoItem> TodoItems { get; }
+    DbSet<Tenant> Tenants { get; }
     DbSet<Emisor> Emisores { get; }
     DbSet<Factura> Facturas { get; }
 

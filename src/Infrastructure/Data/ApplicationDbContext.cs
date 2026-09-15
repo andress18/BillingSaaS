@@ -11,11 +11,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
-    public DbSet<TodoList> TodoLists => Set<TodoList>();
+    public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<Emisor> Emisores => Set<Emisor>();
     public DbSet<Factura> Facturas => Set<Factura>();
 
-    public DbSet<TodoItem> TodoItems => Set<TodoItem>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
