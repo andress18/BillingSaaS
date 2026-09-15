@@ -23,6 +23,7 @@ public class WebApiFactory(string connectionString) : WebApplicationFactory<Prog
                     var mock = new Mock<IUser>();
                     mock.SetupGet(x => x.Roles).Returns(TestApp.GetRoles());
                     mock.SetupGet(x => x.Id).Returns(TestApp.GetUserId());
+                    mock.SetupGet(x => x.TenantId).Returns(TestApp.GetTenantId());
                     return mock.Object;
                 });
         });

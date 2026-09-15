@@ -12,6 +12,9 @@ public static class TestApp
 {
     private static string? _userId;
     private static List<string>? _roles;
+    private static Guid? _tenantId;
+
+    public static Guid? GetTenantId() => _tenantId;
 
     public static async Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request)
     {
@@ -45,13 +48,18 @@ public static class TestApp
         return await RunAsUserAsync("administrator@local", "Administrator1234!", [Roles.Administrator]);
     }
 
-    public static async Task<string> RunAsUserAsync(string userName, string password, string[] roles)
+    public static async Task<string> RunAsUserAsync(string userName, string password, string[] roles, Guid? tenantId = null)
     {
         using var scope = FunctionalTestSetup.ScopeFactory.CreateScope();
 
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-        var user = new ApplicationUser { UserName = userName, Email = userName };
+        var user = new ApplicationUser
+        {
+            UserName = userName,
+            Email = userName,
+            TenantId = tenantId ?? Guid.NewGuid()
+        };
 
         var result = await userManager.CreateAsync(user, password);
 
@@ -71,6 +79,7 @@ public static class TestApp
         {
             _userId = user.Id;
             _roles = [..roles];
+            _tenantId = user.TenantId;
             return _userId;
         }
 
@@ -88,6 +97,7 @@ public static class TestApp
 
         _userId = null;
         _roles = null;
+        _tenantId = null;
     }
 
     public static async Task<TEntity?> FindAsync<TEntity>(params object[] keyValues)

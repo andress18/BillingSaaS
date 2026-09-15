@@ -76,7 +76,12 @@ public class ApplicationDbContextInitialiser
         }
 
         // Default users
-        var administrator = new ApplicationUser { UserName = "administrator@localhost", Email = "administrator@localhost" };
+        var administrator = new ApplicationUser
+        {
+            UserName = "administrator@localhost",
+            Email = "administrator@localhost",
+            TenantId = Guid.Parse("11111111-1111-1111-1111-111111111111")
+        };
 
         if (_userManager.Users.All(u => u.UserName != administrator.UserName))
         {
@@ -87,23 +92,20 @@ public class ApplicationDbContextInitialiser
             }
         }
 
-        // Default data
-        // Seed, if necessary
-        if (!_context.TodoLists.Any())
-        {
-            _context.TodoLists.Add(new TodoList
-            {
-                Title = "Tasks",
-                Colour = Colour.Green,
-                Items =
-                {
-                    new TodoItem { Title = "Make a todo list 📃" },
-                    new TodoItem { Title = "Check off the first item ✅" },
-                    new TodoItem { Title = "Realise you've already done two things on the list! 🤯"},
-                    new TodoItem { Title = "Reward yourself with a nice, long nap 🏆" },
-                }
-            });
+        
+        // Seed Tenant
+        var defaultTenantId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var defaultPartnerId = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
+        if (!_context.Tenants.Any())
+        {
+            var tenant = Tenant.Crear(
+                nombre: "PRUEBAS SAAS FACTURACION",
+                partnerId: defaultPartnerId,
+                id: defaultTenantId
+            );
+
+            _context.Tenants.Add(tenant);
             await _context.SaveChangesAsync();
         }
 

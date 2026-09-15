@@ -1,7 +1,6 @@
 using System.Runtime.CompilerServices;
 using AutoMapper;
 using BillingSaaS.Application.Common.Interfaces;
-using BillingSaaS.Application.TodoLists.Queries.GetTodos;
 using BillingSaaS.Domain.Entities;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
@@ -33,15 +32,7 @@ public class MappingTests
         _configuration!.AssertConfigurationIsValid();
     }
 
-    [Test]
-    [TestCase(typeof(TodoList), typeof(TodoListDto))]
-    [TestCase(typeof(TodoItem), typeof(TodoItemDto))]
-    public void ShouldSupportMappingFromSourceToDestination(Type source, Type destination)
-    {
-        var instance = GetInstanceOf(source);
-
-        _mapper!.Map(instance, source, destination);
-    }
+   
 
     private static object GetInstanceOf(Type type)
     {
