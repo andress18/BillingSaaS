@@ -129,6 +129,45 @@ public class Emisor : BaseAuditableEntity
         Ambiente = nuevoAmbiente;
     }
 
+    public void ActualizarDatosTributarios(
+        string razonSocial,
+        string direccionMatriz,
+        string? nombreComercial = null,
+        string? direccionEstablecimiento = null,
+        string codigoEstablecimiento = "001",
+        string puntoEmision = "001",
+        int ambiente = 1,
+        bool obligadoContabilidad = false,
+        string? regimenRimpe = null,
+        string? contribuyenteEspecial = null)
+    {
+        if (string.IsNullOrWhiteSpace(razonSocial) || razonSocial.Length > 300)
+            throw new ArgumentException("La razón social es obligatoria y no puede exceder 300 caracteres.", nameof(razonSocial));
+
+        if (string.IsNullOrWhiteSpace(direccionMatriz) || direccionMatriz.Length > 300)
+            throw new ArgumentException("La dirección matriz es obligatoria y no puede exceder 300 caracteres.", nameof(direccionMatriz));
+
+        if (string.IsNullOrWhiteSpace(codigoEstablecimiento) || codigoEstablecimiento.Length != 3 || !codigoEstablecimiento.All(char.IsDigit))
+            throw new ArgumentException("El código de establecimiento debe tener exactamente 3 dígitos numéricos.", nameof(codigoEstablecimiento));
+
+        if (string.IsNullOrWhiteSpace(puntoEmision) || puntoEmision.Length != 3 || !puntoEmision.All(char.IsDigit))
+            throw new ArgumentException("El punto de emisión debe tener exactamente 3 dígitos numéricos.", nameof(puntoEmision));
+
+        if (ambiente is not (1 or 2))
+            throw new ArgumentException("El ambiente debe ser 1 (Pruebas) o 2 (Producción).", nameof(ambiente));
+
+        RazonSocial = razonSocial;
+        DireccionMatriz = direccionMatriz;
+        NombreComercial = nombreComercial;
+        DireccionEstablecimiento = direccionEstablecimiento;
+        CodigoEstablecimiento = codigoEstablecimiento;
+        PuntoEmision = puntoEmision;
+        Ambiente = ambiente;
+        ObligadoContabilidad = obligadoContabilidad;
+        RegimenRimpe = regimenRimpe;
+        ContribuyenteEspecial = contribuyenteEspecial;
+    }
+
     public void Desactivar() => Activo = false;
     public void Activar() => Activo = true;
 }

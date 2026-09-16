@@ -28,29 +28,63 @@ public record ConfigurarEmisorCommand : IRequest<int>
 public class ConfigurarEmisorCommandHandler : IRequestHandler<ConfigurarEmisorCommand, int>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IUser _user;
+    private readonly ICertificateEncryptionService _encryptionService;
 
-    public ConfigurarEmisorCommandHandler(IApplicationDbContext context)
+    public ConfigurarEmisorCommandHandler(
+        IApplicationDbContext context,
+        IUser user,
+        ICertificateEncryptionService encryptionService)
     {
         _context = context;
+        _user = user;
+        _encryptionService = encryptionService;
     }
 
     public async Task<int> Handle(ConfigurarEmisorCommand request, CancellationToken cancellationToken)
     {
-        var emisor = Emisor.Crear(
-            tenantId: request.TenantId,
-            ruc: request.Ruc,
-            razonSocial: request.RazonSocial,
-            direccionMatriz: request.DireccionMatriz,
-            codigoEstablecimiento: request.CodigoEstablecimiento,
-            puntoEmision: request.PuntoEmision,
-            ambiente: request.Ambiente,
-            obligadoContabilidad: request.ObligadoContabilidad,
-            nombreComercial: request.NombreComercial,
-            direccionEstablecimiento: request.DireccionEstablecimiento,
-            regimenRimpe: request.RegimenRimpe,
-            contribuyenteEspecial: request.ContribuyenteEspecial,
-            secuencialInicial: request.SecuencialInicial
-        );
+        var tenantId = request.TenantId != Guid.Empty 
+            ? request.TenantId 
+            : (_user.TenantId ?? throw new UnauthorizedAccessException("Usuario no tiene TenantId asignado."));
+
+        var emisor = await _context.Emisores
+            .FirstOrDefaultAsync(e => e.TenantId == tenantId, cancellationToken);
+
+        if (emisor == null)
+        {
+            emisor = Emisor.Crear(
+                tenantId: tenantId,
+                ruc: request.Ruc,
+                razonSocial: request.RazonSocial,
+                direccionMatriz: request.DireccionMatriz,
+                codigoEstablecimiento: request.CodigoEstablecimiento,
+                puntoEmision: request.PuntoEmision,
+                ambiente: request.Ambiente,
+                obligadoContabilidad: request.ObligadoContabilidad,
+                nombreComercial: request.NombreComercial,
+                direccionEstablecimiento: request.DireccionEstablecimiento,
+                regimenRimpe: request.RegimenRimpe,
+                contribuyenteEspecial: request.ContribuyenteEspecial,
+                secuencialInicial: request.SecuencialInicial
+            );
+
+            _context.Emisores.Add(emisor);
+        }
+        else
+        {
+            emisor.ActualizarDatosTributarios(
+                razonSocial: request.RazonSocial,
+                direccionMatriz: request.DireccionMatriz,
+                nombreComercial: request.NombreComercial,
+                direccionEstablecimiento: request.DireccionEstablecimiento,
+                codigoEstablecimiento: request.CodigoEstablecimiento,
+                puntoEmision: request.PuntoEmision,
+                ambiente: request.Ambiente,
+                obligadoContabilidad: request.ObligadoContabilidad,
+                regimenRimpe: request.RegimenRimpe,
+                contribuyenteEspecial: request.ContribuyenteEspecial
+            );
+        }
 
         if (!string.IsNullOrWhiteSpace(request.CertificadoBase64) && !string.IsNullOrWhiteSpace(request.PasswordCertificado))
         {
@@ -59,11 +93,20 @@ public class ConfigurarEmisorCommandHandler : IRequestHandler<ConfigurarEmisorCo
                 ? Convert.FromHexString(raw[2..])
                 : Convert.FromBase64String(raw);
 
+            // 1. Validar integridad y vigencia del certificado .p12 en memoria volátil
             using var cert = X509CertificateLoader.LoadPkcs12(p12Bytes, request.PasswordCertificado);
-            emisor.ConfigurarCertificado(p12Bytes, request.PasswordCertificado, cert.NotAfter, cert.Subject);
+            var fechaCaducidad = cert.NotAfter;
+            var subject = cert.Subject;
+
+            // 2. Cifrar en reposo con AES-256-GCM vinculando criptográficamente el TenantId como AAD (LOPDP / OWASP)
+            var aad = tenantId.ToByteArray();
+            var encryptedCertBytes = _encryptionService.Encrypt(p12Bytes, aad);
+            var encryptedPassword = _encryptionService.EncryptString(request.PasswordCertificado, aad);
+
+            // 3. Persistir únicamente los datos cifrados
+            emisor.ConfigurarCertificado(encryptedCertBytes, encryptedPassword, fechaCaducidad, subject);
         }
 
-        _context.Emisores.Add(emisor);
         await _context.SaveChangesAsync(cancellationToken);
 
         return emisor.Id;
