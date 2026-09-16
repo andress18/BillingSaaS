@@ -4,10 +4,6 @@ public class ConfigurarEmisorCommandValidator : AbstractValidator<ConfigurarEmis
 {
     public ConfigurarEmisorCommandValidator()
     {
-        RuleFor(x => x.TenantId)
-            .NotEmpty()
-            .WithMessage("El TenantId es obligatorio.");
-
         RuleFor(x => x.Ruc)
             .NotEmpty()
             .Length(13)

@@ -36,17 +36,20 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
     private readonly IFacturaXmlGenerator _xmlGenerator;
     private readonly ISriSignatureService _signatureService;
     private readonly ISriRecepcionService _recepcionService;
+    private readonly ICertificateEncryptionService _encryptionService;
 
     public EmitirFacturaCommandHandler(
         IApplicationDbContext context,
         IFacturaXmlGenerator xmlGenerator,
         ISriSignatureService signatureService,
-        ISriRecepcionService recepcionService)
+        ISriRecepcionService recepcionService,
+        ICertificateEncryptionService encryptionService)
     {
         _context = context;
         _xmlGenerator = xmlGenerator;
         _signatureService = signatureService;
         _recepcionService = recepcionService;
+        _encryptionService = encryptionService;
     }
 
     public async Task<EmitirFacturaResponseDto> Handle(EmitirFacturaCommand request, CancellationToken cancellationToken)
@@ -108,9 +111,14 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
         string claveAcceso = ClaveAccesoService.GenerarDigitoVerificador(cadenaBase);
         factura.AsignarClaveAcceso(claveAcceso);
 
-        // 6. Generar y Firmar XML v1.1.0 con XAdES-BES
+        // 6. Generar y Firmar XML v1.1.0 con XAdES-BES (descifrado estrictamente en memoria volátil)
         var xmlSinFirma = _xmlGenerator.GenerarXml(factura);
-        var xmlFirmadoDoc = _signatureService.FirmarXml(xmlSinFirma, emisor.CertificadoDigital!, emisor.PasswordCertificado!);
+
+        var aad = emisor.TenantId.ToByteArray();
+        var rawCertBytes = _encryptionService.Decrypt(emisor.CertificadoDigital!, aad);
+        var rawPassword = _encryptionService.DecryptString(emisor.PasswordCertificado!, aad);
+
+        var xmlFirmadoDoc = _signatureService.FirmarXml(xmlSinFirma, rawCertBytes, rawPassword);
         byte[] xmlFirmadoBytes = Encoding.UTF8.GetBytes(xmlFirmadoDoc.OuterXml);
 
         // 7. Transmisión al Web Service de Recepción del SRI (con manejo de contingencia)

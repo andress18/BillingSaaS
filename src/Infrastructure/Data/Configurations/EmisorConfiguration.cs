@@ -46,7 +46,7 @@ public class EmisorConfiguration : IEntityTypeConfiguration<Emisor>
             .HasMaxLength(50);
 
         builder.Property(e => e.PasswordCertificado)
-            .HasMaxLength(500);
+            .HasMaxLength(1000);
 
         builder.Property(e => e.SubjectCertificado)
             .HasMaxLength(500);

@@ -2,6 +2,7 @@ using BillingSaaS.Application.Common.Interfaces;
 using BillingSaaS.Infrastructure.Data;
 using BillingSaaS.Infrastructure.Data.Interceptors;
 using BillingSaaS.Infrastructure.Identity;
+using BillingSaaS.Infrastructure.Security;
 using BillingSaaS.Infrastructure.Servicios;
 using BillingSaaS.Infrastructure.Servicios.Sri;
 using Microsoft.AspNetCore.Identity;
@@ -58,6 +59,9 @@ public static class DependencyInjection
         // Servicios de Facturación y Firma SRI
         builder.Services.AddTransient<IFacturaXmlGenerator, FacturaXmlGenerator>();
         builder.Services.AddTransient<ISriSignatureService, SriSignatureService>();
+
+        // Servicio criptográfico de custodia y cifrado en reposo para certificados digitales (LOPDP / OWASP / NIST SP 800-38D)
+        builder.Services.AddSingleton<ICertificateEncryptionService, AesGcmCertificateEncryptionService>();
 
         // Clientes SOAP SRI con HttpClient tipado y protocolo TLS 1.2 explícito para servidores estatales
         builder.Services.AddHttpClient<ISriRecepcionService, SriRecepcionService>(client =>
