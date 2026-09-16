@@ -21,6 +21,8 @@ public class EmisorBriefDto
     public DateTime? FechaCaducidadCertificado { get; init; }
     public string? SubjectCertificado { get; init; }
     public bool Activo { get; init; }
+    public int SecuencialFactura { get; init; }
+
 
     private class Mapping : Profile
     {

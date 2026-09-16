@@ -139,7 +139,8 @@ public class Emisor : BaseAuditableEntity
         int ambiente = 1,
         bool obligadoContabilidad = false,
         string? regimenRimpe = null,
-        string? contribuyenteEspecial = null)
+        string? contribuyenteEspecial = null,
+        int secuencialInicial = 0)
     {
         if (string.IsNullOrWhiteSpace(razonSocial) || razonSocial.Length > 300)
             throw new ArgumentException("La razón social es obligatoria y no puede exceder 300 caracteres.", nameof(razonSocial));
@@ -155,6 +156,14 @@ public class Emisor : BaseAuditableEntity
 
         if (ambiente is not (1 or 2))
             throw new ArgumentException("El ambiente debe ser 1 (Pruebas) o 2 (Producción).", nameof(ambiente));
+
+        if (secuencialInicial < 0)
+            throw new ArgumentException("El secuencial inicial debe ser mayor a cero.", nameof(secuencialInicial));
+
+        if (secuencialInicial != 0)
+        {
+            SecuencialFactura = secuencialInicial;
+        }
 
         RazonSocial = razonSocial;
         DireccionMatriz = direccionMatriz;

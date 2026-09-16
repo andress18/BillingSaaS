@@ -82,7 +82,8 @@ public class ConfigurarEmisorCommandHandler : IRequestHandler<ConfigurarEmisorCo
                 ambiente: request.Ambiente,
                 obligadoContabilidad: request.ObligadoContabilidad,
                 regimenRimpe: request.RegimenRimpe,
-                contribuyenteEspecial: request.ContribuyenteEspecial
+                contribuyenteEspecial: request.ContribuyenteEspecial,
+                secuencialInicial: request.SecuencialInicial
             );
         }
 
