@@ -32,6 +32,8 @@ public class FacturaConfiguration : IEntityTypeConfiguration<Factura>
         builder.Property(f => f.MensajeErrorSri)
             .HasMaxLength(1000);
 
+        builder.Property(f => f.XmlFirmado);
+
         builder.HasOne<Emisor>()
             .WithMany()
             .HasForeignKey(f => f.EmisorId)

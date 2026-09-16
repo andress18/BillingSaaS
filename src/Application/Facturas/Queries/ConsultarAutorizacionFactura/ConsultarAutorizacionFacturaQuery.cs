@@ -37,7 +37,7 @@ public class ConsultarAutorizacionFacturaQueryHandler : IRequestHandler<Consulta
         {
             if (!string.IsNullOrWhiteSpace(aut.NumeroAutorizacion) && aut.FechaAutorizacion.HasValue)
             {
-                factura.MarcarComoAutorizada(aut.NumeroAutorizacion, aut.FechaAutorizacion.Value);
+                factura.MarcarComoAutorizada(aut.NumeroAutorizacion, aut.FechaAutorizacion.Value, aut.ComprobanteXml);
                 await _context.SaveChangesAsync(cancellationToken);
             }
         }

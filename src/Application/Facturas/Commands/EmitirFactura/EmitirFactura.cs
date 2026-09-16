@@ -120,6 +120,7 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
 
         var xmlFirmadoDoc = _signatureService.FirmarXml(xmlSinFirma, rawCertBytes, rawPassword);
         byte[] xmlFirmadoBytes = Encoding.UTF8.GetBytes(xmlFirmadoDoc.OuterXml);
+        factura.AsignarXmlFirmado(xmlFirmadoDoc.OuterXml);
 
         // 7. Transmisión al Web Service de Recepción del SRI (con manejo de contingencia)
         string? mensajeDevolucion = null;

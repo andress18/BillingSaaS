@@ -17,6 +17,7 @@ public class Factura : BaseAuditableEntity
     public string? NumeroAutorizacion { get; private set; }
     public DateTime? FechaAutorizacion { get; private set; }
     public string? MensajeErrorSri { get; private set; }
+    public string? XmlFirmado { get; private set; }
 
     // ==========================================
     // 1. INFORMACIÓN TRIBUTARIA (Cabecera)
@@ -157,7 +158,7 @@ public class Factura : BaseAuditableEntity
         MensajeErrorSri = null;
     }
 
-    public void MarcarComoAutorizada(string numeroAutorizacion, DateTime fechaAutorizacion)
+    public void MarcarComoAutorizada(string numeroAutorizacion, DateTime fechaAutorizacion, string? comprobanteXml = null)
     {
         if (string.IsNullOrWhiteSpace(numeroAutorizacion))
             throw new ArgumentException("El número de autorización es obligatorio.", nameof(numeroAutorizacion));
@@ -166,6 +167,19 @@ public class Factura : BaseAuditableEntity
         NumeroAutorizacion = numeroAutorizacion;
         FechaAutorizacion = fechaAutorizacion;
         MensajeErrorSri = null;
+
+        if (!string.IsNullOrWhiteSpace(comprobanteXml))
+        {
+            XmlFirmado = comprobanteXml;
+        }
+    }
+
+    public void AsignarXmlFirmado(string xmlFirmado)
+    {
+        if (!string.IsNullOrWhiteSpace(xmlFirmado))
+        {
+            XmlFirmado = xmlFirmado;
+        }
     }
 
     public void MarcarComoDevuelta(string motivoError)

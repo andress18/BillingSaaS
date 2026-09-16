@@ -48,5 +48,19 @@ app.Map("/", () => Results.Redirect("/scalar"));
 app.MapDefaultEndpoints();
 app.MapEndpoints(typeof(Program).Assembly);
 
+app.MapGet("/api/v1/facturas/{id:int}/pdf", async (MediatR.ISender sender, HttpContext httpContext, int id) =>
+{
+    var result = await sender.Send(new BillingSaaS.Application.Facturas.Queries.GetFacturaPdf.GetFacturaPdfQuery(id));
+    httpContext.Response.Headers.ContentDisposition = $"inline; filename=\"{result.FileName}\"";
+    return Results.File(result.Content, "application/pdf");
+}).RequireAuthorization().WithTags("Facturas");
+
+app.MapGet("/api/v1/facturas/{id:int}/xml", async (MediatR.ISender sender, HttpContext httpContext, int id, bool? raw) =>
+{
+    var result = await sender.Send(new BillingSaaS.Application.Facturas.Queries.GetFacturaXml.GetFacturaXmlQuery(id, raw ?? false));
+    httpContext.Response.Headers.ContentDisposition = $"attachment; filename=\"{result.FileName}\"";
+    return Results.File(result.Content, result.ContentType);
+}).RequireAuthorization().WithTags("Facturas");
+
 
 app.Run();
