@@ -50,8 +50,16 @@ public class ApplicationDbContextInitialiser
     {
         try
         {
-            // await _context.Database.EnsureDeletedAsync();
             await _context.Database.EnsureCreatedAsync();
+
+            try
+            {
+                await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Facturas ADD COLUMN XmlFirmado TEXT;");
+            }
+            catch
+            {
+                // Ignorar si la columna ya existe en SQLite
+            }
         }
         catch (Exception ex)
         {

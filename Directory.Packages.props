@@ -45,5 +45,8 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.18.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.18.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.18.0" />
+    <PackageVersion Include="QuestPDF" Version="2026.9.0" />
+    <PackageVersion Include="Barcoder" Version="3.0.0" />
+    <PackageVersion Include="Barcoder.Renderer.Svg" Version="3.0.0" />
   </ItemGroup>
 </Project>

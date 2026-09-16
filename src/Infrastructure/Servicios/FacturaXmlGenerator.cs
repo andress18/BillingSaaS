@@ -1,14 +1,23 @@
 using System.Globalization;
+using System.IO;
+using System.Text;
+using System.Xml;
 using System.Xml.Linq;
 using BillingSaaS.Application.Common.Interfaces;
 using BillingSaaS.Domain.Entities;
-
-// Ajusta al namespace de tus entidades
 
 namespace BillingSaaS.Infrastructure.Servicios;
 
 public class FacturaXmlGenerator : IFacturaXmlGenerator
 {
+    private static readonly UTF8Encoding Utf8NoBom = new(false);
+    private static readonly XmlWriterSettings IndentedSettings = new()
+    {
+        Encoding = Utf8NoBom,
+        Indent = true,
+        OmitXmlDeclaration = false
+    };
+
     // Tu RUC como proveedor de software (Requisito Anexo 26)
     private readonly string _rucProveedor;
 
@@ -136,5 +145,74 @@ public class FacturaXmlGenerator : IFacturaXmlGenerator
         xml.Descendants().Where(e => e.IsEmpty && !e.HasAttributes).Remove();
 
         return xml;
+    }
+
+    public byte[] GenerarXmlBytes(Factura factura)
+    {
+        var doc = GenerarXml(factura);
+        using var ms = new MemoryStream();
+        using (var writer = XmlWriter.Create(ms, IndentedSettings))
+        {
+            doc.Save(writer);
+        }
+        return ms.ToArray();
+    }
+
+    public byte[] GenerarXmlAutorizadoBytes(Factura factura, string? xmlComprobanteFirmado = null)
+    {
+        // 1. Obtener el XML del comprobante (prioriza el firmado digitalmente en memoria/BD)
+        string rawComprobanteXml;
+        if (!string.IsNullOrWhiteSpace(xmlComprobanteFirmado))
+        {
+            rawComprobanteXml = xmlComprobanteFirmado;
+        }
+        else
+        {
+            var facturaDoc = GenerarXml(factura);
+            var sb = new StringBuilder();
+            using (var stringWriter = new StringWriter(sb))
+            using (var xmlWriter = XmlWriter.Create(stringWriter, new XmlWriterSettings
+            {
+                Encoding = Utf8NoBom,
+                Indent = false,
+                OmitXmlDeclaration = false
+            }))
+            {
+                facturaDoc.Save(xmlWriter);
+            }
+            rawComprobanteXml = sb.ToString();
+        }
+
+        // 2. Si está autorizado, empaquetar en el formato estándar oficial SRI <autorizacion>
+        if (string.Equals(factura.Estado, "AUTORIZADO", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(factura.NumeroAutorizacion))
+        {
+            var fechaAutorizacionStr = factura.FechaAutorizacion?.ToString("dd/MM/yyyy HH:mm:ss")
+                                       ?? DateTime.UtcNow.AddHours(-5).ToString("dd/MM/yyyy HH:mm:ss");
+
+            var autorizacionDoc = new XDocument(
+                new XDeclaration("1.0", "UTF-8", null),
+                new XElement("autorizacion",
+                    new XElement("estado", "AUTORIZADO"),
+                    new XElement("numeroAutorizacion", factura.NumeroAutorizacion),
+                    new XElement("fechaAutorizacion",
+                        new XAttribute("class", "fechaAutorizacion"),
+                        fechaAutorizacionStr),
+                    new XElement("ambiente", factura.Ambiente == 2 ? "PRODUCCION" : "PRUEBAS"),
+                    new XElement("comprobante", new XCData(rawComprobanteXml)),
+                    new XElement("mensajes")
+                )
+            );
+
+            using var ms = new MemoryStream();
+            using (var writer = XmlWriter.Create(ms, IndentedSettings))
+            {
+                autorizacionDoc.Save(writer);
+            }
+            return ms.ToArray();
+        }
+
+        // Si no está autorizado, retornar el XML de la factura directamente
+        return Utf8NoBom.GetBytes(rawComprobanteXml);
     }
 }

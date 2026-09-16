@@ -3,6 +3,7 @@ using BillingSaaS.Infrastructure.Data;
 using BillingSaaS.Infrastructure.Data.Interceptors;
 using BillingSaaS.Infrastructure.Identity;
 using BillingSaaS.Infrastructure.Security;
+using BillingSaaS.Infrastructure.Services;
 using BillingSaaS.Infrastructure.Servicios;
 using BillingSaaS.Infrastructure.Servicios.Sri;
 using Microsoft.AspNetCore.Identity;
@@ -11,6 +12,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using QuestPDF.Infrastructure;
 
 namespace BillingSaaS.Infrastructure;
 
@@ -18,8 +20,8 @@ public static class DependencyInjection
 {
     public static void AddInfrastructureServices(this IHostApplicationBuilder builder)
     {
-        var connectionString = builder.Configuration.GetConnectionString(Services.Database);
-        Guard.Against.Null(connectionString, message: $"Connection string '{Services.Database}' not found.");
+        var connectionString = builder.Configuration.GetConnectionString(BillingSaaS.Shared.Services.Database);
+        Guard.Against.Null(connectionString, message: $"Connection string '{BillingSaaS.Shared.Services.Database}' not found.");
 
         builder.Services.AddScoped<ISaveChangesInterceptor, AuditableEntityInterceptor>();
         builder.Services.AddScoped<ISaveChangesInterceptor, DispatchDomainEventsInterceptor>();
@@ -59,6 +61,10 @@ public static class DependencyInjection
         // Servicios de Facturación y Firma SRI
         builder.Services.AddTransient<IFacturaXmlGenerator, FacturaXmlGenerator>();
         builder.Services.AddTransient<ISriSignatureService, SriSignatureService>();
+
+        // Generador de Representación Impresa (RIDE) en PDF (QuestPDF)
+        QuestPDF.Settings.License = LicenseType.Community;
+        builder.Services.AddTransient<IRidePdfGenerator, RidePdfGenerator>();
 
         // Servicio criptográfico de custodia y cifrado en reposo para certificados digitales (LOPDP / OWASP / NIST SP 800-38D)
         builder.Services.AddSingleton<ICertificateEncryptionService, AesGcmCertificateEncryptionService>();
