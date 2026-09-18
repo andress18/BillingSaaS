@@ -97,7 +97,7 @@ public class RidePdfGenerator : IRidePdfGenerator
         string direccionEstablecimiento = emisor?.DireccionEstablecimiento ?? direccionMatriz;
         bool obligadoContabilidad = emisor?.ObligadoContabilidad ?? false;
         string? contribuyenteEspecial = emisor?.ContribuyenteEspecial;
-        string? regimenRimpe = emisor?.RegimenRimpe;
+        string? regimenRimpe = emisor?.RegimenRimpe ?? factura.ContribuyenteRimpe;
 
         // 5. Creación del Documento QuestPDF
         var document = Document.Create(container =>
@@ -163,8 +163,6 @@ public class RidePdfGenerator : IRidePdfGenerator
                                 {
                                     emisorBox.Item().PaddingTop(2).Text(regimenRimpe.ToUpperInvariant()).Bold().FontSize(7.5f);
                                 }
-
-                                emisorBox.Item().PaddingTop(2).Text("Agente de Retención Resolución No. 1").FontSize(7.5f).FontColor(Colors.Grey.Darken2);
                             });
                         });
 
@@ -325,6 +323,15 @@ public class RidePdfGenerator : IRidePdfGenerator
                                     {
                                         t.Span("Dirección: ").Bold();
                                         t.Span(factura.Cliente.Direccion);
+                                    });
+                                }
+
+                                if (!string.IsNullOrWhiteSpace(regimenRimpe))
+                                {
+                                    adicionalBox.Item().PaddingTop(2).Text(t =>
+                                    {
+                                        t.Span("Régimen Tributario: ").Bold();
+                                        t.Span(regimenRimpe);
                                     });
                                 }
 

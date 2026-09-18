@@ -58,5 +58,9 @@ public class EmitirFacturaCommandValidator : AbstractValidator<EmitirFacturaComm
             detalle.RuleFor(d => d.Impuestos)
                 .NotEmpty().WithMessage("Cada detalle debe tener al menos un impuesto configurado (ej. IVA).");
         });
+
+        RuleFor(x => x.RegimenRimpe)
+            .Must(r => string.IsNullOrWhiteSpace(r) || Domain.Constants.RegimenRimpeTipos.EsValido(r))
+            .WithMessage("El régimen tributario debe ser 'CONTRIBUYENTE RÉGIMEN RIMPE', 'CONTRIBUYENTE NEGOCIO POPULAR - RÉGIMEN RIMPE' o vacío para Régimen General.");
     }
 }

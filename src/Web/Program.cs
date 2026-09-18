@@ -74,5 +74,9 @@ app.MapGet("/api/Suscripciones/planes", async (MediatR.ISender sender) =>
     return Results.Ok(response);
 }).WithTags("Suscripciones");
 
+app.MapGet("/api/v1/emisores/regimenes-rimpe", BillingSaaS.Web.Endpoints.Emisores.GetRegimenesRimpe)
+    .RequireAuthorization()
+    .WithTags("Emisores");
+
 
 app.Run();

@@ -35,6 +35,10 @@ public class ConfigurarEmisorCommandValidator : AbstractValidator<ConfigurarEmis
         RuleFor(x => x.Ambiente)
             .Must(a => a is 1 or 2)
             .WithMessage("El ambiente debe ser 1 (Pruebas) o 2 (Producción).");
+
+        RuleFor(x => x.RegimenRimpe)
+            .Must(r => string.IsNullOrWhiteSpace(r) || Domain.Constants.RegimenRimpeTipos.EsValido(r))
+            .WithMessage("El régimen tributario debe ser 'CONTRIBUYENTE RÉGIMEN RIMPE', 'CONTRIBUYENTE NEGOCIO POPULAR - RÉGIMEN RIMPE' o vacío para Régimen General.");
     }
 }
 
