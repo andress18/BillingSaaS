@@ -6,12 +6,7 @@ public class Colour(string code) : ValueObject
     {
         var colour = new Colour(code);
 
-        if (!SupportedColours.Contains(colour))
-        {
-            throw new UnsupportedColourException(code);
-        }
-
-        return colour;
+        return !SupportedColours.Contains(colour) ? throw new UnsupportedColourException(code) : colour;
     }
 
     public static Colour Red => new("#E05C4D");

@@ -47,6 +47,41 @@ public class ProblemDetailsExceptionHandler : IExceptionHandler
                 Detail = hre.Message,
                 Type = "https://tools.ietf.org/html/rfc9110#section-15.6.3"
             }),
+            BillingSaaS.Domain.Exceptions.SubscriptionRequiredException sre => (StatusCodes.Status402PaymentRequired, new ProblemDetails
+            {
+                Status = StatusCodes.Status402PaymentRequired,
+                Title = "Suscripción requerida",
+                Detail = sre.Message,
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.3"
+            }),
+            BillingSaaS.Domain.Exceptions.SubscriptionExpiredException see => (StatusCodes.Status402PaymentRequired, new ProblemDetails
+            {
+                Status = StatusCodes.Status402PaymentRequired,
+                Title = "Suscripción expirada",
+                Detail = see.Message,
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.3"
+            }),
+            BillingSaaS.Domain.Exceptions.SubscriptionLimitExceededException sle => (StatusCodes.Status402PaymentRequired, new ProblemDetails
+            {
+                Status = StatusCodes.Status402PaymentRequired,
+                Title = "Límite de documentos excedido",
+                Detail = sle.Message,
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.3"
+            }),
+            BillingSaaS.Domain.Exceptions.DocumentTypeNotAllowedException dte => (StatusCodes.Status403Forbidden, new ProblemDetails
+            {
+                Status = StatusCodes.Status403Forbidden,
+                Title = "Tipo de comprobante no permitido",
+                Detail = dte.Message,
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.4"
+            }),
+            BillingSaaS.Domain.Exceptions.EstablishmentLimitExceededException ele => (StatusCodes.Status403Forbidden, new ProblemDetails
+            {
+                Status = StatusCodes.Status403Forbidden,
+                Title = "Límite de establecimientos excedido",
+                Detail = ele.Message,
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.4"
+            }),
             InvalidOperationException ioe => (StatusCodes.Status400BadRequest, new ProblemDetails
             {
                 Status = StatusCodes.Status400BadRequest,

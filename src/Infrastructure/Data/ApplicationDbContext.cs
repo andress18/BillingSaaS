@@ -14,6 +14,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<Emisor> Emisores => Set<Emisor>();
     public DbSet<Factura> Facturas => Set<Factura>();
+    public DbSet<Plan> Planes => Set<Plan>();
+    public DbSet<TenantSubscription> Suscripciones => Set<TenantSubscription>();
 
 
     protected override void OnModelCreating(ModelBuilder builder)

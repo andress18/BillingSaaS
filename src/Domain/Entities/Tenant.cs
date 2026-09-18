@@ -15,10 +15,9 @@ public class Tenant : BaseAuditableEntity
 
     public static Tenant Crear(string nombre, Guid? partnerId = null, Guid? id = null)
     {
-        if (string.IsNullOrWhiteSpace(nombre))
-            throw new ArgumentException("El nombre del tenant es obligatorio.", nameof(nombre));
-
-        return new Tenant
+        return string.IsNullOrWhiteSpace(nombre)
+            ? throw new ArgumentException("El nombre del tenant es obligatorio.", nameof(nombre))
+            : new Tenant
         {
             Id = id ?? Guid.NewGuid(),
             Nombre = nombre.Trim(),

@@ -37,19 +37,22 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
     private readonly ISriSignatureService _signatureService;
     private readonly ISriRecepcionService _recepcionService;
     private readonly ICertificateEncryptionService _encryptionService;
+    private readonly ISubscriptionValidationService _subscriptionValidator;
 
     public EmitirFacturaCommandHandler(
         IApplicationDbContext context,
         IFacturaXmlGenerator xmlGenerator,
         ISriSignatureService signatureService,
         ISriRecepcionService recepcionService,
-        ICertificateEncryptionService encryptionService)
+        ICertificateEncryptionService encryptionService,
+        ISubscriptionValidationService subscriptionValidator)
     {
         _context = context;
         _xmlGenerator = xmlGenerator;
         _signatureService = signatureService;
         _recepcionService = recepcionService;
         _encryptionService = encryptionService;
+        _subscriptionValidator = subscriptionValidator;
     }
 
     public async Task<EmitirFacturaResponseDto> Handle(EmitirFacturaCommand request, CancellationToken cancellationToken)
@@ -63,6 +66,13 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
 
         if (!emisor.TieneCertificadoValido())
             throw new InvalidOperationException("El emisor no tiene un certificado digital válido configurado o ya ha caducado.");
+
+        // 1.1 Validar suscripción activa y límites de emisión del plan SaaS
+        await _subscriptionValidator.ValidarEmisionAsync(
+            emisor.TenantId,
+            codDoc: "01",
+            codigoEstablecimiento: emisor.CodigoEstablecimiento,
+            cancellationToken);
 
         // 2. Obtener siguiente número secuencial atómico
         var secuencial = emisor.ObtenerSiguienteSecuencialFactura();

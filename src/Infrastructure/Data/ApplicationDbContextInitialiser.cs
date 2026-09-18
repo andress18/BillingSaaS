@@ -60,6 +60,52 @@ public class ApplicationDbContextInitialiser
             {
                 // Ignorar si la columna ya existe en SQLite
             }
+
+            try
+            {
+                await _context.Database.ExecuteSqlRawAsync(@"
+                    CREATE TABLE IF NOT EXISTS Planes (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        Codigo TEXT NOT NULL,
+                        Nombre TEXT NOT NULL,
+                        Descripcion TEXT NULL,
+                        PrecioMensual TEXT NOT NULL,
+                        PrecioAnual TEXT NOT NULL,
+                        MaxDocumentosMensuales INTEGER NULL,
+                        MaxDocumentosAnuales INTEGER NULL,
+                        MaxEstablecimientos INTEGER NOT NULL,
+                        TiposDocumentosPermitidos TEXT NOT NULL,
+                        EsPublico INTEGER NOT NULL,
+                        Activo INTEGER NOT NULL,
+                        Created TEXT NOT NULL,
+                        CreatedBy TEXT NULL,
+                        LastModified TEXT NOT NULL,
+                        LastModifiedBy TEXT NULL
+                    );
+                    CREATE UNIQUE INDEX IF NOT EXISTS IX_Planes_Codigo ON Planes (Codigo);
+
+                    CREATE TABLE IF NOT EXISTS Suscripciones (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        TenantId TEXT NOT NULL,
+                        PlanId INTEGER NOT NULL,
+                        FechaInicio TEXT NOT NULL,
+                        FechaVencimiento TEXT NOT NULL,
+                        Frecuencia TEXT NOT NULL,
+                        Estado TEXT NOT NULL,
+                        DiasGracia INTEGER NOT NULL,
+                        Created TEXT NOT NULL,
+                        CreatedBy TEXT NULL,
+                        LastModified TEXT NOT NULL,
+                        LastModifiedBy TEXT NULL,
+                        FOREIGN KEY (PlanId) REFERENCES Planes (Id) ON DELETE RESTRICT
+                    );
+                    CREATE UNIQUE INDEX IF NOT EXISTS IX_Suscripciones_TenantId ON Suscripciones (TenantId);
+                ");
+            }
+            catch
+            {
+                // Ignorar si ya existen
+            }
         }
         catch (Exception ex)
         {
@@ -160,5 +206,87 @@ public class ApplicationDbContextInitialiser
         emisor.ConfigurarCertificado(encryptedCert, encryptedPass, cert.NotAfter, cert.Subject);
 
         await _context.SaveChangesAsync();
+
+        // Seed Catálogo de Planes
+        if (!await _context.Planes.AnyAsync())
+        {
+            var planes = new List<Plan>
+            {
+                // 1. Plan Legado ($45 anuales, límite 300 docs/año, 1 sucursal, docs: 01,04, oculto/no público)
+                Plan.Crear(
+                    codigo: "LEGACY",
+                    nombre: "Plan Legado",
+                    descripcion: "Plan especial reservado para clientes antiguos con tarifa anual preferencial y límite de uso justo.",
+                    precioMensual: 4.50m,
+                    precioAnual: 45.00m,
+                    maxDocumentosMensuales: null,
+                    maxDocumentosAnuales: 300,
+                    maxEstablecimientos: 1,
+                    tiposDocumentosPermitidos: "01,04",
+                    esPublico: false
+                ),
+                // 2. Plan Emprendedor ($5/mes o $50/año, 1 sucursal, hasta 30 facturas/mes)
+                Plan.Crear(
+                    codigo: "EMPRENDEDOR",
+                    nombre: "Emprendedor",
+                    descripcion: "Ideal para profesionales y pequeños negocios que inician en la facturación electrónica.",
+                    precioMensual: 5.00m,
+                    precioAnual: 50.00m,
+                    maxDocumentosMensuales: 30,
+                    maxDocumentosAnuales: 360,
+                    maxEstablecimientos: 1,
+                    tiposDocumentosPermitidos: "01,04",
+                    esPublico: true
+                ),
+                // 3. Plan Comercio Pro ($10/mes o $99/año, facturación ilimitada)
+                Plan.Crear(
+                    codigo: "COMERCIO_PRO",
+                    nombre: "Comercio Pro",
+                    descripcion: "Para negocios consolidados que requieren facturación electrónica ilimitada y notas de crédito/débito.",
+                    precioMensual: 10.00m,
+                    precioAnual: 99.00m,
+                    maxDocumentosMensuales: null,
+                    maxDocumentosAnuales: null,
+                    maxEstablecimientos: 1,
+                    tiposDocumentosPermitidos: "01,04,05",
+                    esPublico: true
+                ),
+                // 4. Plan PYME Multi-sucursal ($25/mes o $250/año, hasta 3 establecimientos y guías de remisión)
+                Plan.Crear(
+                    codigo: "PYME_MULTI",
+                    nombre: "PYME Multi-sucursal",
+                    descripcion: "Control multi-establecimiento integral con guías de remisión y liquidaciones de compra.",
+                    precioMensual: 25.00m,
+                    precioAnual: 250.00m,
+                    maxDocumentosMensuales: null,
+                    maxDocumentosAnuales: null,
+                    maxEstablecimientos: 3,
+                    tiposDocumentosPermitidos: "01,03,04,05,06",
+                    esPublico: true
+                )
+            };
+
+            _context.Planes.AddRange(planes);
+            await _context.SaveChangesAsync();
+        }
+
+        // Seed Suscripción Activa para el Tenant demo
+        if (!await _context.Suscripciones.AnyAsync(s => s.TenantId == defaultTenantId))
+        {
+            var planComercioPro = await _context.Planes.FirstOrDefaultAsync(p => p.Codigo == "COMERCIO_PRO");
+            if (planComercioPro != null)
+            {
+                var suscripcion = TenantSubscription.Crear(
+                    tenantId: defaultTenantId,
+                    planId: planComercioPro.Id,
+                    fechaInicio: DateTime.UtcNow.AddMonths(-1),
+                    fechaVencimiento: DateTime.UtcNow.AddMonths(11),
+                    frecuencia: "ANUAL",
+                    diasGracia: 5
+                );
+                _context.Suscripciones.Add(suscripcion);
+                await _context.SaveChangesAsync();
+            }
+        }
     }
 }
