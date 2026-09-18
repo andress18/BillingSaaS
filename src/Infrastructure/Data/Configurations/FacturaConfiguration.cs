@@ -34,6 +34,9 @@ public class FacturaConfiguration : IEntityTypeConfiguration<Factura>
 
         builder.Property(f => f.XmlFirmado);
 
+        builder.Property(f => f.ContribuyenteRimpe)
+            .HasMaxLength(60);
+
         builder.HasOne<Emisor>()
             .WithMany()
             .HasForeignKey(f => f.EmisorId)

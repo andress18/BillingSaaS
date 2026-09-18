@@ -9,6 +9,7 @@ namespace BillingSaaS.Application.Facturas.Commands.EmitirFactura;
 public record EmitirFacturaCommand : IRequest<EmitirFacturaResponseDto>
 {
     public int EmisorId { get; init; }
+    public string? RegimenRimpe { get; init; }
     public CompradorDto Cliente { get; init; } = null!;
     public List<DetalleDto> Detalles { get; init; } = new();
 
@@ -98,6 +99,10 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
         // 4. Crear entidad Factura en el huso horario oficial de Ecuador (UTC-5)
         var fechaEmision = DateTime.UtcNow.AddHours(-5).Date;
 
+        var regimenRimpe = !string.IsNullOrWhiteSpace(request.RegimenRimpe)
+            ? Domain.Constants.RegimenRimpeTipos.Normalizar(request.RegimenRimpe)
+            : emisor.RegimenRimpe;
+
         var factura = Factura.Crear(
             tenantId: emisor.TenantId,
             ambiente: emisor.Ambiente,
@@ -110,7 +115,8 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
             fechaEmision: fechaEmision,
             cliente: comprador,
             detalles: detalles,
-            emisorId: emisor.Id
+            emisorId: emisor.Id,
+            contribuyenteRimpe: regimenRimpe
         );
 
         // 5. Generar Clave de Acceso de 49 dígitos con Módulo 11

@@ -119,5 +119,88 @@ public class FacturaXmlGeneratorTests
         string xmlStr = Encoding.UTF8.GetString(xmlBytes);
         xmlStr.ShouldContain("<comprobante><![CDATA[<factura id=\"comprobante\"><ds:Signature xmlns:ds=\"http://www.w3.org/2000/09/xmldsig#\">FIRMA_MOCK</ds:Signature></factura>]]></comprobante>");
     }
+
+    [Test]
+    public void GenerarXml_ConRegimenRimpeEmprendedor_DeberiaIncluirEtiquetaContribuyenteRimpe()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var comprador = Comprador.Crear("07", "9999999999999", "CONSUMIDOR FINAL");
+        var detalles = new List<DetalleFactura>
+        {
+            DetalleFactura.Crear("SRV-1", "Servicio General", 1, 10m, 0,
+                [Impuesto.Crear("2", "4", 15m, 10m)])
+        };
+
+        var factura = Factura.Crear(
+            tenantId, 1, "EMPRENDEDOR SA", "0957790108001",
+            "001", "001", "000000101", "Matriz",
+            DateTime.UtcNow, comprador, detalles,
+            contribuyenteRimpe: "CONTRIBUYENTE RÉGIMEN RIMPE");
+        factura.AsignarClaveAcceso("1609202601095779010800110010010000001011234567813");
+
+        // Act
+        byte[] xmlBytes = _xmlGenerator.GenerarXmlBytes(factura);
+        string xmlStr = Encoding.UTF8.GetString(xmlBytes);
+
+        // Assert: Valida etiqueta oficial en infoTributaria y campoAdicional
+        xmlStr.ShouldContain("<contribuyenteRimpe>CONTRIBUYENTE RÉGIMEN RIMPE</contribuyenteRimpe>");
+        xmlStr.ShouldContain("<campoAdicional nombre=\"Regimen\">CONTRIBUYENTE RÉGIMEN RIMPE</campoAdicional>");
+    }
+
+    [Test]
+    public void GenerarXml_ConRegimenRimpeNegocioPopular_DeberiaIncluirEtiquetaNegocioPopular()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var comprador = Comprador.Crear("07", "9999999999999", "CONSUMIDOR FINAL");
+        var detalles = new List<DetalleFactura>
+        {
+            DetalleFactura.Crear("NP-01", "Venta Menor", 1, 5m, 0,
+                [Impuesto.Crear("2", "0", 0m, 5m)])
+        };
+
+        var factura = Factura.Crear(
+            tenantId, 1, "BAZAR DON PEPE", "0957790108001",
+            "001", "001", "000000202", "Matriz",
+            DateTime.UtcNow, comprador, detalles,
+            contribuyenteRimpe: "CONTRIBUYENTE NEGOCIO POPULAR - RÉGIMEN RIMPE");
+        factura.AsignarClaveAcceso("1609202601095779010800110010010000002021234567813");
+
+        // Act
+        byte[] xmlBytes = _xmlGenerator.GenerarXmlBytes(factura);
+        string xmlStr = Encoding.UTF8.GetString(xmlBytes);
+
+        // Assert: Valida leyenda exacta oficial requerida por el SRI
+        xmlStr.ShouldContain("<contribuyenteRimpe>CONTRIBUYENTE NEGOCIO POPULAR - RÉGIMEN RIMPE</contribuyenteRimpe>");
+        xmlStr.ShouldContain("<campoAdicional nombre=\"Regimen\">CONTRIBUYENTE NEGOCIO POPULAR - RÉGIMEN RIMPE</campoAdicional>");
+    }
+
+    [Test]
+    public void GenerarXml_RegimenGeneral_NoDeberiaIncluirEtiquetaContribuyenteRimpe()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var comprador = Comprador.Crear("07", "9999999999999", "CONSUMIDOR FINAL");
+        var detalles = new List<DetalleFactura>
+        {
+            DetalleFactura.Crear("GEN-1", "Venta General", 1, 20m, 0,
+                [Impuesto.Crear("2", "4", 15m, 20m)])
+        };
+
+        var factura = Factura.Crear(
+            tenantId, 1, "EMPRESA GENERAL SA", "0957790108001",
+            "001", "001", "000000303", "Matriz",
+            DateTime.UtcNow, comprador, detalles,
+            contribuyenteRimpe: null);
+        factura.AsignarClaveAcceso("1609202601095779010800110010010000003031234567813");
+
+        // Act
+        byte[] xmlBytes = _xmlGenerator.GenerarXmlBytes(factura);
+        string xmlStr = Encoding.UTF8.GetString(xmlBytes);
+
+        // Assert
+        xmlStr.ShouldNotContain("<contribuyenteRimpe>");
+    }
 }
 

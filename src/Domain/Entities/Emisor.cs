@@ -79,7 +79,7 @@ public class Emisor : BaseAuditableEntity
             SecuencialFactura = secuencialInicial,
             Ambiente = ambiente,
             ObligadoContabilidad = obligadoContabilidad,
-            RegimenRimpe = regimenRimpe,
+            RegimenRimpe = Constants.RegimenRimpeTipos.Normalizar(regimenRimpe),
             ContribuyenteEspecial = contribuyenteEspecial,
             Activo = true
         };
@@ -170,7 +170,7 @@ public class Emisor : BaseAuditableEntity
         PuntoEmision = puntoEmision;
         Ambiente = ambiente;
         ObligadoContabilidad = obligadoContabilidad;
-        RegimenRimpe = regimenRimpe;
+        RegimenRimpe = Constants.RegimenRimpeTipos.Normalizar(regimenRimpe);
         ContribuyenteEspecial = contribuyenteEspecial;
     }
 

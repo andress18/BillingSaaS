@@ -63,6 +63,15 @@ public class ApplicationDbContextInitialiser
 
             try
             {
+                await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Facturas ADD COLUMN ContribuyenteRimpe TEXT;");
+            }
+            catch
+            {
+                // Ignorar si la columna ya existe en SQLite
+            }
+
+            try
+            {
                 await _context.Database.ExecuteSqlRawAsync(@"
                     CREATE TABLE IF NOT EXISTS Planes (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -12,6 +12,7 @@ public class Emisores : IEndpointGroup
 
         groupBuilder.MapGet(GetEmisores);
         groupBuilder.MapPost(ConfigurarEmisor);
+        groupBuilder.MapGet(GetRegimenesRimpe, "regimenes-rimpe");
     }
 
     [EndpointSummary("Listar Emisores del Tenant")]
@@ -31,5 +32,41 @@ public class Emisores : IEndpointGroup
 
         return TypedResults.Created($"/api/Emisores/{id}", id);
     }
+
+    [EndpointSummary("Obtener regímenes tributarios RIMPE del SRI")]
+    [EndpointDescription("Devuelve el catálogo de regímenes tributarios (Régimen General, RIMPE Emprendedor y RIMPE Negocio Popular) con sus leyendas y códigos oficiales.")]
+    public static Ok<List<RegimenRimpeDto>> GetRegimenesRimpe()
+    {
+        var result = new List<RegimenRimpeDto>
+        {
+            new(
+                Codigo: Domain.Constants.RegimenRimpeTipos.CodigoGeneral,
+                Nombre: "Régimen General",
+                LeyendaSri: null,
+                Descripcion: "Contribuyentes no sujetos a RIMPE. Facturación general con tarifas de IVA según el producto (15%, 5%, 0%)."
+            ),
+            new(
+                Codigo: Domain.Constants.RegimenRimpeTipos.CodigoEmprendedor,
+                Nombre: "Régimen RIMPE - Emprendedor",
+                LeyendaSri: Domain.Constants.RegimenRimpeTipos.Emprendedor,
+                Descripcion: "Personas naturales y jurídicas con ingresos anuales de hasta $300,000. Emisión de facturas electrónicas con IVA y leyenda oficial 'CONTRIBUYENTE RÉGIMEN RIMPE' en XML y RIDE."
+            ),
+            new(
+                Codigo: Domain.Constants.RegimenRimpeTipos.CodigoNegocioPopular,
+                Nombre: "Régimen RIMPE - Negocio Popular",
+                LeyendaSri: Domain.Constants.RegimenRimpeTipos.NegocioPopular,
+                Descripcion: "Personas naturales con ingresos de hasta $20,000 anuales. Emisión con tarifa 0% de IVA para actividades RIMPE y leyenda obligatoria 'CONTRIBUYENTE NEGOCIO POPULAR - RÉGIMEN RIMPE'."
+            )
+        };
+
+        return TypedResults.Ok(result);
+    }
 }
+
+public record RegimenRimpeDto(
+    string Codigo,
+    string Nombre,
+    string? LeyendaSri,
+    string Descripcion
+);
 

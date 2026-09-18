@@ -73,6 +73,11 @@ public class Factura : BaseAuditableEntity
     /// </summary>
     public string DireccionMatriz { get; private set; } = null!;
 
+    /// <summary>
+    /// Leyenda oficial SRI para contribuyentes RIMPE ("CONTRIBUYENTE RÉGIMEN RIMPE" o "CONTRIBUYENTE NEGOCIO POPULAR - RÉGIMEN RIMPE")
+    /// </summary>
+    public string? ContribuyenteRimpe { get; private set; }
+
     // ==========================================
     // 2. INFORMACIÓN DE LA FACTURA (Comprador y Totales)
     // ==========================================
@@ -116,7 +121,8 @@ public class Factura : BaseAuditableEntity
         Guid tenantId, int ambiente, string razonSocial, string rucEmisor, 
         string establecimiento, string puntoEmision, string secuencial, 
         string direccionMatriz, DateTime fechaEmision, Comprador cliente, 
-        List<DetalleFactura> detalles, int emisorId = 0)
+        List<DetalleFactura> detalles, int emisorId = 0,
+        string? contribuyenteRimpe = null)
     {
         var factura = new Factura
         {
@@ -131,6 +137,7 @@ public class Factura : BaseAuditableEntity
             PuntoEmision = puntoEmision,
             Secuencial = secuencial,
             DireccionMatriz = direccionMatriz,
+            ContribuyenteRimpe = Constants.RegimenRimpeTipos.Normalizar(contribuyenteRimpe),
             FechaEmision = fechaEmision,
             Estado = "CREADA",
         

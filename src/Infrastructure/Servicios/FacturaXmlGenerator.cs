@@ -60,7 +60,10 @@ public class FacturaXmlGenerator : IFacturaXmlGenerator
                     new XElement("estab", factura.Establecimiento),
                     new XElement("ptoEmi", factura.PuntoEmision),
                     new XElement("secuencial", factura.Secuencial),
-                    new XElement("dirMatriz", factura.DireccionMatriz)
+                    new XElement("dirMatriz", factura.DireccionMatriz),
+                    !string.IsNullOrWhiteSpace(factura.ContribuyenteRimpe)
+                        ? new XElement("contribuyenteRimpe", factura.ContribuyenteRimpe)
+                        : null
                 ),
 
                 // 2. INFORMACIÓN DE LA FACTURA
@@ -128,6 +131,10 @@ public class FacturaXmlGenerator : IFacturaXmlGenerator
                         new XAttribute("nombre", "RUC Proveedor"),
                         _rucProveedor
                     ),
+                    !string.IsNullOrWhiteSpace(factura.ContribuyenteRimpe)
+                        ? new XElement("campoAdicional", new XAttribute("nombre", "Regimen"),
+                            factura.ContribuyenteRimpe)
+                        : null,
                     // Opcionales del cliente (Si tiene dirección o correo configurado)
                     !string.IsNullOrWhiteSpace(factura.Cliente.Direccion)
                         ? new XElement("campoAdicional", new XAttribute("nombre", "Direccion"),
