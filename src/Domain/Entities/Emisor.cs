@@ -60,16 +60,13 @@ public class Emisor : BaseAuditableEntity
         if (string.IsNullOrWhiteSpace(direccionMatriz) || direccionMatriz.Length > 300)
             throw new ArgumentException("La dirección matriz es obligatoria y no puede exceder 300 caracteres.", nameof(direccionMatriz));
 
-        if (string.IsNullOrWhiteSpace(codigoEstablecimiento) || codigoEstablecimiento.Length != 3 || !codigoEstablecimiento.All(char.IsDigit))
-            throw new ArgumentException("El código de establecimiento debe tener exactamente 3 dígitos numéricos.", nameof(codigoEstablecimiento));
-
-        if (string.IsNullOrWhiteSpace(puntoEmision) || puntoEmision.Length != 3 || !puntoEmision.All(char.IsDigit))
-            throw new ArgumentException("El punto de emisión debe tener exactamente 3 dígitos numéricos.", nameof(puntoEmision));
-
-        if (ambiente is not (1 or 2))
-            throw new ArgumentException("El ambiente debe ser 1 (Pruebas) o 2 (Producción).", nameof(ambiente));
-
-        return new Emisor
+        return string.IsNullOrWhiteSpace(codigoEstablecimiento) || codigoEstablecimiento.Length != 3 || !codigoEstablecimiento.All(char.IsDigit)
+            ? throw new ArgumentException("El código de establecimiento debe tener exactamente 3 dígitos numéricos.", nameof(codigoEstablecimiento))
+            : string.IsNullOrWhiteSpace(puntoEmision) || puntoEmision.Length != 3 || !puntoEmision.All(char.IsDigit)
+            ? throw new ArgumentException("El punto de emisión debe tener exactamente 3 dígitos numéricos.", nameof(puntoEmision))
+            : ambiente is not (1 or 2)
+            ? throw new ArgumentException("El ambiente debe ser 1 (Pruebas) o 2 (Producción).", nameof(ambiente))
+            : new Emisor
         {
             TenantId = tenantId,
             Ruc = ruc,

@@ -60,13 +60,10 @@ public class AesGcmCertificateEncryptionService : ICertificateEncryptionService
                     ? Convert.FromHexString(rawKey)
                     : Convert.FromBase64String(rawKey);
 
-                if (decoded.Length != KeySize)
-                {
-                    throw new InvalidOperationException(
-                        $"La clave de cifrado configurada no tiene una longitud válida de 256 bits ({KeySize} bytes). Longitud detectada: {decoded.Length} bytes.");
-                }
-
-                return decoded;
+                return decoded.Length != KeySize
+                    ? throw new InvalidOperationException(
+                        $"La clave de cifrado configurada no tiene una longitud válida de 256 bits ({KeySize} bytes). Longitud detectada: {decoded.Length} bytes.")
+                    : decoded;
             }
             catch (FormatException ex)
             {

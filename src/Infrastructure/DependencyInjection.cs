@@ -66,6 +66,9 @@ public static class DependencyInjection
         QuestPDF.Settings.License = LicenseType.Community;
         builder.Services.AddTransient<IRidePdfGenerator, RidePdfGenerator>();
 
+        // Servicio de Control de Planes y Suscripciones SaaS
+        builder.Services.AddScoped<ISubscriptionValidationService, SubscriptionValidationService>();
+
         // Servicio criptográfico de custodia y cifrado en reposo para certificados digitales (LOPDP / OWASP / NIST SP 800-38D)
         builder.Services.AddSingleton<ICertificateEncryptionService, AesGcmCertificateEncryptionService>();
 

@@ -62,5 +62,17 @@ app.MapGet("/api/v1/facturas/{id:int}/xml", async (MediatR.ISender sender, HttpC
     return Results.File(result.Content, result.ContentType);
 }).RequireAuthorization().WithTags("Facturas");
 
+app.MapGet("/api/Suscripciones/actual", async (MediatR.ISender sender) =>
+{
+    var response = await sender.Send(new BillingSaaS.Application.Suscripciones.Queries.GetTenantSubscription.GetTenantSubscriptionQuery());
+    return Results.Ok(response);
+}).RequireAuthorization().WithTags("Suscripciones");
+
+app.MapGet("/api/Suscripciones/planes", async (MediatR.ISender sender) =>
+{
+    var response = await sender.Send(new BillingSaaS.Application.Suscripciones.Queries.GetPlanes.GetPlanesQuery());
+    return Results.Ok(response);
+}).WithTags("Suscripciones");
+
 
 app.Run();
