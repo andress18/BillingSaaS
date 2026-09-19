@@ -52,22 +52,46 @@ public class ApplicationDbContextInitialiser
         {
             await _context.Database.EnsureCreatedAsync();
 
-            try
+            if (_context.Database.IsSqlite())
             {
-                await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Facturas ADD COLUMN XmlFirmado TEXT;");
-            }
-            catch
-            {
-                // Ignorar si la columna ya existe en SQLite
-            }
+                try
+                {
+                    var connection = _context.Database.GetDbConnection();
+                    bool wasClosed = connection.State == System.Data.ConnectionState.Closed;
+                    if (wasClosed) await connection.OpenAsync();
 
-            try
-            {
-                await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Facturas ADD COLUMN ContribuyenteRimpe TEXT;");
-            }
-            catch
-            {
-                // Ignorar si la columna ya existe en SQLite
+                    try
+                    {
+                        using var cmd = connection.CreateCommand();
+                        cmd.CommandText = "PRAGMA table_info(Facturas);";
+                        var columnasExistentes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                columnasExistentes.Add(reader.GetString(1));
+                            }
+                        }
+
+                        if (!columnasExistentes.Contains("XmlFirmado"))
+                        {
+                            await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Facturas ADD COLUMN XmlFirmado TEXT;");
+                        }
+
+                        if (!columnasExistentes.Contains("ContribuyenteRimpe"))
+                        {
+                            await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Facturas ADD COLUMN ContribuyenteRimpe TEXT;");
+                        }
+                    }
+                    finally
+                    {
+                        if (wasClosed) await connection.CloseAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "No se pudieron verificar/migrar columnas adicionales en Facturas.");
+                }
             }
 
             try
@@ -109,6 +133,30 @@ public class ApplicationDbContextInitialiser
                         FOREIGN KEY (PlanId) REFERENCES Planes (Id) ON DELETE RESTRICT
                     );
                     CREATE UNIQUE INDEX IF NOT EXISTS IX_Suscripciones_TenantId ON Suscripciones (TenantId);
+
+                    CREATE TABLE IF NOT EXISTS SolicitudesRenovacion (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        TenantId TEXT NOT NULL,
+                        PlanId INTEGER NOT NULL,
+                        Frecuencia TEXT NOT NULL,
+                        Monto REAL NOT NULL,
+                        MetodoPago TEXT NOT NULL,
+                        BancoOrigen TEXT NULL,
+                        NumeroComprobante TEXT NOT NULL,
+                        ComprobanteUrl TEXT NULL,
+                        Observaciones TEXT NULL,
+                        Estado TEXT NOT NULL,
+                        FechaSolicitud TEXT NOT NULL,
+                        FechaRespuesta TEXT NULL,
+                        MotivoRechazo TEXT NULL,
+                        Created TEXT NOT NULL,
+                        CreatedBy TEXT NULL,
+                        LastModified TEXT NOT NULL,
+                        LastModifiedBy TEXT NULL,
+                        FOREIGN KEY (PlanId) REFERENCES Planes (Id) ON DELETE RESTRICT
+                    );
+                    CREATE INDEX IF NOT EXISTS IX_SolicitudesRenovacion_TenantId ON SolicitudesRenovacion (TenantId);
+                    CREATE INDEX IF NOT EXISTS IX_SolicitudesRenovacion_Estado ON SolicitudesRenovacion (Estado);
                 ");
             }
             catch
@@ -291,7 +339,7 @@ public class ApplicationDbContextInitialiser
                     fechaInicio: DateTime.UtcNow.AddMonths(-1),
                     fechaVencimiento: DateTime.UtcNow.AddMonths(11),
                     frecuencia: "ANUAL",
-                    diasGracia: 5
+                    diasGracia: 3
                 );
                 _context.Suscripciones.Add(suscripcion);
                 await _context.SaveChangesAsync();

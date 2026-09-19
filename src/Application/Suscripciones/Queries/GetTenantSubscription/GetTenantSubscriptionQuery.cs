@@ -36,6 +36,12 @@ public record TenantSubscriptionDto
     public bool PermiteNotasDebito { get; init; }
     public bool PermiteNotasCredito { get; init; }
     public bool PermiteFacturas { get; init; }
+
+    // Solicitud de renovación pendiente de validación manual
+    public bool TieneSolicitudPendiente { get; init; }
+    public int? SolicitudPendienteId { get; init; }
+    public string? NumeroComprobantePendiente { get; init; }
+    public DateTime? FechaSolicitudPendiente { get; init; }
 }
 
 public record GetTenantSubscriptionQuery : IRequest<TenantSubscriptionDto>;
@@ -86,6 +92,12 @@ public class GetTenantSubscriptionQueryHandler : IRequestHandler<GetTenantSubscr
             .Distinct()
             .CountAsync(cancellationToken);
 
+        var solicitudPendiente = await _context.SolicitudesRenovacion
+            .AsNoTracking()
+            .Where(s => s.TenantId == tenantId && s.Estado == "PENDIENTE")
+            .OrderByDescending(s => s.FechaSolicitud)
+            .FirstOrDefaultAsync(cancellationToken);
+
         var plan = suscripcion.Plan;
         bool esIlimitado = plan.EsIlimitado(suscripcion.Frecuencia);
         int? limite = plan.ObtenerLimiteDocumentos(suscripcion.Frecuencia);
@@ -118,7 +130,12 @@ public class GetTenantSubscriptionQueryHandler : IRequestHandler<GetTenantSubscr
             PermiteLiquidaciones = plan.PermiteTipoDocumento("03"),
             PermiteNotasCredito = plan.PermiteTipoDocumento("04"),
             PermiteNotasDebito = plan.PermiteTipoDocumento("05"),
-            PermiteGuiasRemision = plan.PermiteTipoDocumento("06")
+            PermiteGuiasRemision = plan.PermiteTipoDocumento("06"),
+
+            TieneSolicitudPendiente = solicitudPendiente != null,
+            SolicitudPendienteId = solicitudPendiente?.Id,
+            NumeroComprobantePendiente = solicitudPendiente?.NumeroComprobante,
+            FechaSolicitudPendiente = solicitudPendiente?.FechaSolicitud
         };
     }
 }

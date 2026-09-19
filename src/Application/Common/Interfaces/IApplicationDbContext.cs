@@ -9,6 +9,7 @@ public interface IApplicationDbContext
     DbSet<Factura> Facturas { get; }
     DbSet<Plan> Planes { get; }
     DbSet<TenantSubscription> Suscripciones { get; }
+    DbSet<SolicitudRenovacion> SolicitudesRenovacion { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

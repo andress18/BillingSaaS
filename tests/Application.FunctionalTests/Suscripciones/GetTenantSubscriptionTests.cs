@@ -1,6 +1,8 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using BillingSaaS.Application.FunctionalTests.Infrastructure;
+using BillingSaaS.Application.Suscripciones.Commands.RenovarSuscripcion;
 using BillingSaaS.Application.Suscripciones.Queries.GetPlanes;
 using BillingSaaS.Application.Suscripciones.Queries.GetTenantSubscription;
 using BillingSaaS.Domain.Entities;
@@ -67,6 +69,40 @@ public class GetTenantSubscriptionTests : TestBase
 
         await Should.ThrowAsync<SubscriptionRequiredException>(() =>
             TestApp.SendAsync(new GetTenantSubscriptionQuery()));
+    }
+
+    [Test]
+    public async Task RenovarSuscripcion_UpgradePlan_DebeActualizarSuscripcionCorrectamente()
+    {
+        var tenantId = Guid.NewGuid();
+        await TestApp.RunAsUserAsync("upgrade_test@local", "Password123!", [], tenantId);
+
+        var planes = await TestApp.SendAsync(new GetPlanesQuery());
+        var planInicial = planes.First(p => p.Codigo == "EMPRENDEDOR");
+        var planNuevo = planes.First(p => p.Codigo == "COMERCIO_PRO");
+
+        var hoy = DateTime.UtcNow;
+        var sub = TenantSubscription.Crear(
+            tenantId,
+            planInicial.Id,
+            hoy.AddDays(-20),
+            hoy.AddDays(10),
+            "MENSUAL"
+        );
+        await TestApp.AddAsync(sub);
+
+        var renovarResult = await TestApp.SendAsync(new RenovarSuscripcionCommand
+        {
+            PlanId = planNuevo.Id,
+            Frecuencia = "ANUAL"
+        });
+
+        renovarResult.ShouldNotBeNull();
+        renovarResult.PlanCodigo.ShouldBe("COMERCIO_PRO");
+        renovarResult.PlanNombre.ShouldBe("Comercio Pro");
+        renovarResult.EsIlimitado.ShouldBeTrue();
+        renovarResult.Estado.ShouldBe("ACTIVO");
+        renovarResult.DiasRestantes.ShouldBeGreaterThan(300);
     }
 }
 
