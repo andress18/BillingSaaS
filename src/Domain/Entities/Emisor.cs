@@ -103,6 +103,14 @@ public class Emisor : BaseAuditableEntity
         SubjectCertificado = subject;
     }
 
+    public void EliminarCertificado()
+    {
+        CertificadoDigital = null;
+        PasswordCertificado = null;
+        FechaCaducidadCertificado = null;
+        SubjectCertificado = null;
+    }
+
     public bool TieneCertificadoValido()
     {
         return CertificadoDigital != null &&

@@ -26,10 +26,34 @@ public static class DependencyInjection
         builder.Services.AddScoped<ISaveChangesInterceptor, AuditableEntityInterceptor>();
         builder.Services.AddScoped<ISaveChangesInterceptor, DispatchDomainEventsInterceptor>();
 
+        var databaseProvider = builder.Configuration.GetValue<string>("DatabaseProvider");
+        var isSqlServer = !string.IsNullOrEmpty(databaseProvider)
+            ? databaseProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase)
+            : (connectionString.Contains("Server=", StringComparison.OrdinalIgnoreCase) ||
+               connectionString.Contains("Initial Catalog=", StringComparison.OrdinalIgnoreCase) ||
+               connectionString.Contains("TrustServerCertificate=", StringComparison.OrdinalIgnoreCase));
+
         builder.Services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {
             options.AddInterceptors(sp.GetServices<ISaveChangesInterceptor>());
-            options.UseSqlite(connectionString);
+            if (isSqlServer)
+            {
+                options.UseSqlServer(connectionString, sqlOptions =>
+                {
+                    sqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 5,
+                        maxRetryDelay: TimeSpan.FromSeconds(30),
+                        errorNumbersToAdd: null);
+                    sqlOptions.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
+                });
+            }
+            else
+            {
+                options.UseSqlite(connectionString, sqliteOptions =>
+                {
+                    sqliteOptions.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
+                });
+            }
             options.ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
         });
 

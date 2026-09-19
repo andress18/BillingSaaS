@@ -37,6 +37,15 @@ public class FacturaConfiguration : IEntityTypeConfiguration<Factura>
         builder.Property(f => f.ContribuyenteRimpe)
             .HasMaxLength(60);
 
+        builder.Property(f => f.TotalSinImpuestos)
+            .HasPrecision(18, 2);
+
+        builder.Property(f => f.TotalDescuento)
+            .HasPrecision(18, 2);
+
+        builder.Property(f => f.ImporteTotal)
+            .HasPrecision(18, 2);
+
         builder.HasOne<Emisor>()
             .WithMany()
             .HasForeignKey(f => f.EmisorId)
