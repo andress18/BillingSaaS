@@ -84,5 +84,10 @@ app.MapGet("/api/v1/emisores/regimenes-rimpe", BillingSaaS.Web.Endpoints.Emisore
     .RequireAuthorization()
     .WithTags("Emisores");
 
+app.MapGet("/api/v1/admin/clientes", async (MediatR.ISender sender, [Microsoft.AspNetCore.Mvc.FromQuery] Guid? partnerId) =>
+{
+    var response = await sender.Send(new BillingSaaS.Application.Tenants.Queries.GetClientesCartera.GetClientesCarteraQuery(partnerId));
+    return Results.Ok(response);
+}).RequireAuthorization(new Microsoft.AspNetCore.Authorization.AuthorizeAttribute { Roles = BillingSaaS.Domain.Constants.Roles.Administrator }).WithTags("Admin");
 
 app.Run();

@@ -188,44 +188,113 @@ public class ApplicationDbContextInitialiser
     {
         // Default roles
         var administratorRole = new IdentityRole(Roles.Administrator);
-
         if (_roleManager.Roles.All(r => r.Name != administratorRole.Name))
         {
             await _roleManager.CreateAsync(administratorRole);
         }
 
-        // Default users
-        var administrator = new ApplicationUser
+        var partnerRole = new IdentityRole(Roles.Partner);
+        if (_roleManager.Roles.All(r => r.Name != partnerRole.Name))
         {
-            UserName = "administrator@localhost",
-            Email = "administrator@localhost",
-            TenantId = Guid.Parse("11111111-1111-1111-1111-111111111111")
-        };
-
-        if (_userManager.Users.All(u => u.UserName != administrator.UserName))
-        {
-            await _userManager.CreateAsync(administrator, "Administrator1!");
-            if (!string.IsNullOrWhiteSpace(administratorRole.Name))
-            {
-                await _userManager.AddToRolesAsync(administrator, new [] { administratorRole.Name });
-            }
+            await _roleManager.CreateAsync(partnerRole);
         }
 
-        
-        // Seed Tenant
-        var defaultTenantId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        // IDs de Tenants estándar para pruebas
+        var adminTenantId = Guid.Parse("00000000-0000-0000-0000-000000000001");
         var defaultPartnerId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        var defaultTenantId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
-        if (!_context.Tenants.Any())
+        // 1. Inquilino Central de la Administración
+        if (!await _context.Tenants.AnyAsync(t => t.Id == adminTenantId))
+        {
+            var adminTenant = Tenant.Crear(
+                nombre: "ADMINISTRACION SAAS CENTRAL",
+                partnerId: null,
+                id: adminTenantId
+            );
+            _context.Tenants.Add(adminTenant);
+        }
+
+        // 2. Inquilino de la Agencia del Partner
+        if (!await _context.Tenants.AnyAsync(t => t.Id == defaultPartnerId))
+        {
+            var partnerTenant = Tenant.Crear(
+                nombre: "AGENCIA PARTNER DEMO",
+                partnerId: null,
+                id: defaultPartnerId
+            );
+            _context.Tenants.Add(partnerTenant);
+        }
+
+        // 3. Inquilino del Cliente (traído por el Partner)
+        if (!await _context.Tenants.AnyAsync(t => t.Id == defaultTenantId))
         {
             var tenant = Tenant.Crear(
                 nombre: "PRUEBAS SAAS FACTURACION",
                 partnerId: defaultPartnerId,
                 id: defaultTenantId
             );
-
             _context.Tenants.Add(tenant);
-            await _context.SaveChangesAsync();
+        }
+
+        await _context.SaveChangesAsync();
+
+        // --- SEED USUARIOS PARA CADA ROL ---
+
+        // Usuario 1: Super Administrador
+        var existingAdmin = await _userManager.FindByNameAsync("administrator@localhost");
+        if (existingAdmin == null)
+        {
+            var administrator = new ApplicationUser
+            {
+                UserName = "administrator@localhost",
+                Email = "administrator@localhost",
+                TenantId = adminTenantId
+            };
+            await _userManager.CreateAsync(administrator, "Administrator1!");
+            await _userManager.AddToRoleAsync(administrator, Roles.Administrator);
+        }
+        else if (existingAdmin.TenantId != adminTenantId)
+        {
+            existingAdmin.TenantId = adminTenantId;
+            await _userManager.UpdateAsync(existingAdmin);
+        }
+
+        // Usuario 2: Socio / Partner
+        var existingPartner = await _userManager.FindByNameAsync("partner@localhost");
+        if (existingPartner == null)
+        {
+            var partnerUser = new ApplicationUser
+            {
+                UserName = "partner@localhost",
+                Email = "partner@localhost",
+                TenantId = defaultPartnerId
+            };
+            await _userManager.CreateAsync(partnerUser, "Partner123!");
+            await _userManager.AddToRoleAsync(partnerUser, Roles.Partner);
+        }
+        else if (existingPartner.TenantId != defaultPartnerId)
+        {
+            existingPartner.TenantId = defaultPartnerId;
+            await _userManager.UpdateAsync(existingPartner);
+        }
+
+        // Usuario 3: Cliente Final del Partner
+        var existingCliente = await _userManager.FindByNameAsync("cliente@localhost");
+        if (existingCliente == null)
+        {
+            var clienteUser = new ApplicationUser
+            {
+                UserName = "cliente@localhost",
+                Email = "cliente@localhost",
+                TenantId = defaultTenantId
+            };
+            await _userManager.CreateAsync(clienteUser, "Cliente123!");
+        }
+        else if (existingCliente.TenantId != defaultTenantId)
+        {
+            existingCliente.TenantId = defaultTenantId;
+            await _userManager.UpdateAsync(existingCliente);
         }
 
         // Seed Emisor de pruebas para ambiente de certificación SRI
@@ -264,7 +333,7 @@ public class ApplicationDbContextInitialiser
 
         await _context.SaveChangesAsync();
 
-        // Seed Catálogo de Planes: Únicamente los dos planes de migración
+        // Seed Catálogo de Planes: Migración, Cortesía Partner y Administración
         var planMigracionSistema = await _context.Planes.FirstOrDefaultAsync(p => p.Codigo == "MIGRACION_SISTEMA");
         if (planMigracionSistema == null)
         {
@@ -309,9 +378,46 @@ public class ApplicationDbContextInitialiser
             planMigracionFirma.ActualizarPrecios(5.00m, 45.00m);
         }
 
-        // Desactivar cualquier otro plan que no sea de migración
+        var planCortesiaPartner = await _context.Planes.FirstOrDefaultAsync(p => p.Codigo == "PLAN_CORTESIA_PARTNER");
+        if (planCortesiaPartner == null)
+        {
+            planCortesiaPartner = Plan.Crear(
+                codigo: "PLAN_CORTESIA_PARTNER",
+                nombre: "Plan Partner Cortesía",
+                descripcion: "Plan de cortesía para agencias y socios estratégicos que gestionan clientes.",
+                precioMensual: 0.00m,
+                precioAnual: 0.00m,
+                maxDocumentosMensuales: null,
+                maxDocumentosAnuales: null,
+                maxEstablecimientos: 5,
+                tiposDocumentosPermitidos: "01,04",
+                esPublico: false
+            );
+            _context.Planes.Add(planCortesiaPartner);
+        }
+
+        var planAdminSistema = await _context.Planes.FirstOrDefaultAsync(p => p.Codigo == "PLAN_ADMIN_SISTEMA");
+        if (planAdminSistema == null)
+        {
+            planAdminSistema = Plan.Crear(
+                codigo: "PLAN_ADMIN_SISTEMA",
+                nombre: "Plan Administración Central",
+                descripcion: "Facturación interna y cobros de licencias del SaaS.",
+                precioMensual: 0.00m,
+                precioAnual: 0.00m,
+                maxDocumentosMensuales: null,
+                maxDocumentosAnuales: null,
+                maxEstablecimientos: 10,
+                tiposDocumentosPermitidos: "01,04",
+                esPublico: false
+            );
+            _context.Planes.Add(planAdminSistema);
+        }
+
+        // Desactivar cualquier otro plan obsoleto que no esté en uso
+        var codigosValidos = new[] { "MIGRACION_SISTEMA", "MIGRACION_FIRMA", "PLAN_CORTESIA_PARTNER", "PLAN_ADMIN_SISTEMA" };
         var otrosPlanes = await _context.Planes
-            .Where(p => p.Codigo != "MIGRACION_SISTEMA" && p.Codigo != "MIGRACION_FIRMA" && p.Activo)
+            .Where(p => !codigosValidos.Contains(p.Codigo) && p.Activo)
             .ToListAsync();
         foreach (var p in otrosPlanes)
         {
@@ -320,7 +426,50 @@ public class ApplicationDbContextInitialiser
 
         await _context.SaveChangesAsync();
 
-        // Seed Suscripción Activa para el Tenant demo
+        // Seed Emisor de pruebas para el Partner
+        // Seed Emisor de pruebas para el Partner (Sin firma electrónica por defecto)
+        var emisorPartner = await _context.Emisores.FirstOrDefaultAsync(e => e.TenantId == defaultPartnerId);
+        if (emisorPartner == null)
+        {
+            emisorPartner = Emisor.Crear(
+                tenantId: defaultPartnerId,
+                ruc: "1792222222001",
+                razonSocial: "AGENCIA PARTNER DEMO S.A.",
+                direccionMatriz: "Quito - Ecuador",
+                codigoEstablecimiento: "001",
+                puntoEmision: "001",
+                ambiente: 1,
+                obligadoContabilidad: true,
+                nombreComercial: "AGENCIA PARTNER",
+                regimenRimpe: "CONTRIBUYENTE RÉGIMEN GENERAL",
+                secuencialInicial: 0
+            );
+
+            _context.Emisores.Add(emisorPartner);
+        }
+
+        // Seed Emisor de pruebas para el Administrador Central (Sin firma electrónica por defecto)
+        var emisorAdmin = await _context.Emisores.FirstOrDefaultAsync(e => e.TenantId == adminTenantId);
+        if (emisorAdmin == null)
+        {
+            emisorAdmin = Emisor.Crear(
+                tenantId: adminTenantId,
+                ruc: "1790000000001",
+                razonSocial: "ADMINISTRACION SAAS CENTRAL S.A.S.",
+                direccionMatriz: "Quito - Ecuador",
+                codigoEstablecimiento: "001",
+                puntoEmision: "001",
+                ambiente: 1,
+                obligadoContabilidad: true,
+                nombreComercial: "BILLING SAAS ECUADOR",
+                regimenRimpe: "CONTRIBUYENTE RÉGIMEN GENERAL",
+                secuencialInicial: 0
+            );
+
+            _context.Emisores.Add(emisorAdmin);
+        }
+
+        // Seed Suscripción Activa para el Tenant demo cliente
         if (!await _context.Suscripciones.AnyAsync(s => s.TenantId == defaultTenantId))
         {
             var planDefault = planMigracionSistema ?? await _context.Planes.FirstOrDefaultAsync(p => p.Codigo == "MIGRACION_SISTEMA");
@@ -335,8 +484,37 @@ public class ApplicationDbContextInitialiser
                     diasGracia: 3
                 );
                 _context.Suscripciones.Add(suscripcion);
-                await _context.SaveChangesAsync();
             }
         }
+
+        // Seed Suscripción Activa (Cortesía) para el Partner
+        if (!await _context.Suscripciones.AnyAsync(s => s.TenantId == defaultPartnerId))
+        {
+            var suscripcionPartner = TenantSubscription.Crear(
+                tenantId: defaultPartnerId,
+                planId: planCortesiaPartner.Id,
+                fechaInicio: DateTime.UtcNow.AddMonths(-1),
+                fechaVencimiento: DateTime.UtcNow.AddYears(5),
+                frecuencia: "ANUAL",
+                diasGracia: 3
+            );
+            _context.Suscripciones.Add(suscripcionPartner);
+        }
+
+        // Seed Suscripción Activa (Ilimitada) para el Administrador Central
+        if (!await _context.Suscripciones.AnyAsync(s => s.TenantId == adminTenantId))
+        {
+            var suscripcionAdmin = TenantSubscription.Crear(
+                tenantId: adminTenantId,
+                planId: planAdminSistema.Id,
+                fechaInicio: DateTime.UtcNow.AddMonths(-1),
+                fechaVencimiento: DateTime.UtcNow.AddYears(10),
+                frecuencia: "ANUAL",
+                diasGracia: 3
+            );
+            _context.Suscripciones.Add(suscripcionAdmin);
+        }
+
+        await _context.SaveChangesAsync();
     }
 }

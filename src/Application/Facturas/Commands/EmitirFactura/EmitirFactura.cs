@@ -39,6 +39,7 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
     private readonly ISriRecepcionService _recepcionService;
     private readonly ICertificateEncryptionService _encryptionService;
     private readonly ISubscriptionValidationService _subscriptionValidator;
+    private readonly IUser _user;
 
     public EmitirFacturaCommandHandler(
         IApplicationDbContext context,
@@ -46,7 +47,8 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
         ISriSignatureService signatureService,
         ISriRecepcionService recepcionService,
         ICertificateEncryptionService encryptionService,
-        ISubscriptionValidationService subscriptionValidator)
+        ISubscriptionValidationService subscriptionValidator,
+        IUser user)
     {
         _context = context;
         _xmlGenerator = xmlGenerator;
@@ -54,6 +56,7 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
         _recepcionService = recepcionService;
         _encryptionService = encryptionService;
         _subscriptionValidator = subscriptionValidator;
+        _user = user;
     }
 
     public async Task<EmitirFacturaResponseDto> Handle(EmitirFacturaCommand request, CancellationToken cancellationToken)
@@ -61,6 +64,12 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
         // 1. Obtener Emisor configurado desde la base de datos
         var emisor = await _context.Emisores.FindAsync([request.EmisorId], cancellationToken);
         Guard.Against.NotFound(request.EmisorId, emisor);
+
+        var isAdmin = _user.Roles?.Contains(BillingSaaS.Domain.Constants.Roles.Administrator) == true;
+        if (!isAdmin && _user.TenantId.HasValue && _user.TenantId.Value != Guid.Empty && emisor.TenantId != _user.TenantId.Value)
+        {
+            throw new UnauthorizedAccessException("No tiene autorización para emitir facturas a nombre de este emisor.");
+        }
 
         if (!emisor.Activo)
             throw new InvalidOperationException("El emisor se encuentra inactivo.");

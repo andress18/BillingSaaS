@@ -12,8 +12,9 @@ public class GetFacturasTests : TestBase
     public async Task GetFacturas_SinFiltros_DebeRetornarListaPaginada()
     {
         await TestApp.RunAsDefaultUserAsync();
+        var tenantId = TestApp.GetTenantId()!.Value;
 
-        var emisor = Emisor.Crear(Guid.NewGuid(), "0957790108001", "FARMACIA SAN JOSE", "Guayaquil");
+        var emisor = Emisor.Crear(tenantId, "0957790108001", "FARMACIA SAN JOSE", "Guayaquil");
         await TestApp.AddAsync(emisor);
 
         var comprador1 = Comprador.Crear("07", "CONSUMIDOR FINAL", "9999999999999", "Guayaquil", null);
@@ -50,8 +51,9 @@ public class GetFacturasTests : TestBase
     public async Task GetFacturas_FiltrarPorEstado_DebeRetornarSoloCoincidentes()
     {
         await TestApp.RunAsDefaultUserAsync();
+        var tenantId = TestApp.GetTenantId()!.Value;
 
-        var emisor = Emisor.Crear(Guid.NewGuid(), "0957790108002", "SUPERMERCADO CENTRAL", "Quito");
+        var emisor = Emisor.Crear(tenantId, "0957790108002", "SUPERMERCADO CENTRAL", "Quito");
         await TestApp.AddAsync(emisor);
 
         var comprador1 = Comprador.Crear("07", "CONSUMIDOR FINAL", "9999999999999", "Quito", null);
@@ -83,5 +85,37 @@ public class GetFacturasTests : TestBase
         result.Items.First().Secuencial.ShouldBe("000000011");
         result.Items.First().Estado.ShouldBe("AUTORIZADO");
         result.Items.First().NumeroAutorizacion.ShouldBe("1234567890123456789012345678901234567890123456789");
+    }
+
+    [Test]
+    public async Task GetFacturas_UsuarioDeOtroTenant_NoDebeVerFacturasAjenas()
+    {
+        // 1. Usuario A crea una factura en su Tenant
+        await TestApp.RunAsDefaultUserAsync();
+        var tenantA = TestApp.GetTenantId()!.Value;
+
+        var emisorA = Emisor.Crear(tenantA, "0957790108003", "EMPRESA A", "Quito");
+        await TestApp.AddAsync(emisorA);
+
+        var comprador = Comprador.Crear("07", "CONSUMIDOR FINAL", "9999999999999", "Quito", null);
+        var detalle = DetalleFactura.Crear("P03", "Item A", 1, 5m, 0, [Impuesto.Crear("2", "4", 15m, 5m)]);
+
+        var facturaA = Factura.Crear(
+            tenantA, 1, emisorA.RazonSocial, emisorA.Ruc,
+            "001", "001", "000000099", emisorA.DireccionMatriz,
+            DateTime.Now, comprador, [detalle], emisorA.Id);
+        facturaA.AsignarClaveAcceso(new string('9', 49));
+        await TestApp.AddAsync(facturaA);
+
+        // 2. Inicia sesión Usuario B (otro Tenant)
+        await TestApp.RunAsUserAsync("userb@local", "Password123!", []);
+
+        // 3. Usuario B intenta consultar facturas
+        var query = new GetFacturasQuery();
+        var result = await TestApp.SendAsync(query);
+
+        // Debe retornar 0 facturas (aislamiento total)
+        result.TotalCount.ShouldBe(0);
+        result.Items.ShouldBeEmpty();
     }
 }
