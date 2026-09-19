@@ -74,6 +74,12 @@ app.MapGet("/api/Suscripciones/planes", async (MediatR.ISender sender) =>
     return Results.Ok(response);
 }).WithTags("Suscripciones");
 
+app.MapPost("/api/Suscripciones/renovar", async (MediatR.ISender sender, BillingSaaS.Application.Suscripciones.Commands.RenovarSuscripcion.RenovarSuscripcionCommand command) =>
+{
+    var response = await sender.Send(command);
+    return Results.Ok(response);
+}).RequireAuthorization().WithTags("Suscripciones");
+
 app.MapGet("/api/v1/emisores/regimenes-rimpe", BillingSaaS.Web.Endpoints.Emisores.GetRegimenesRimpe)
     .RequireAuthorization()
     .WithTags("Emisores");

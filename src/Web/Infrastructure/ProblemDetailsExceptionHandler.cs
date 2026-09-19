@@ -52,35 +52,50 @@ public class ProblemDetailsExceptionHandler : IExceptionHandler
                 Status = StatusCodes.Status402PaymentRequired,
                 Title = "Suscripción requerida",
                 Detail = sre.Message,
-                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.3"
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.3",
+                Extensions = { ["code"] = "SUBSCRIPTION_REQUIRED" }
             }),
             BillingSaaS.Domain.Exceptions.SubscriptionExpiredException see => (StatusCodes.Status402PaymentRequired, new ProblemDetails
             {
                 Status = StatusCodes.Status402PaymentRequired,
                 Title = "Suscripción expirada",
                 Detail = see.Message,
-                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.3"
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.3",
+                Extensions = 
+                { 
+                    ["code"] = "SUBSCRIPTION_EXPIRED",
+                    ["fechaVencimiento"] = see.FechaVencimiento.ToString("yyyy-MM-dd")
+                }
             }),
             BillingSaaS.Domain.Exceptions.SubscriptionLimitExceededException sle => (StatusCodes.Status402PaymentRequired, new ProblemDetails
             {
                 Status = StatusCodes.Status402PaymentRequired,
                 Title = "Límite de documentos excedido",
                 Detail = sle.Message,
-                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.3"
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.3",
+                Extensions = 
+                { 
+                    ["code"] = "QUOTA_EXCEEDED",
+                    ["planNombre"] = sle.PlanNombre,
+                    ["limite"] = sle.LimiteDocumentos,
+                    ["emitidos"] = sle.Emitidos
+                }
             }),
             BillingSaaS.Domain.Exceptions.DocumentTypeNotAllowedException dte => (StatusCodes.Status403Forbidden, new ProblemDetails
             {
                 Status = StatusCodes.Status403Forbidden,
                 Title = "Tipo de comprobante no permitido",
                 Detail = dte.Message,
-                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.4"
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.4",
+                Extensions = { ["code"] = "DOCUMENT_TYPE_NOT_ALLOWED" }
             }),
             BillingSaaS.Domain.Exceptions.EstablishmentLimitExceededException ele => (StatusCodes.Status403Forbidden, new ProblemDetails
             {
                 Status = StatusCodes.Status403Forbidden,
                 Title = "Límite de establecimientos excedido",
                 Detail = ele.Message,
-                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.4"
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.4",
+                Extensions = { ["code"] = "ESTABLISHMENT_LIMIT_EXCEEDED" }
             }),
             InvalidOperationException ioe => (StatusCodes.Status400BadRequest, new ProblemDetails
             {

@@ -45,16 +45,16 @@ public class TenantSubscriptionTests
     }
 
     [Test]
-    public void EstaVigente_DentroDePeriodoGracia5Dias_DebeRetornarTrueYMarcarGracia()
+    public void EstaVigente_DentroDePeriodoGracia3Dias_DebeRetornarTrueYMarcarGracia()
     {
         var hoy = new DateTime(2026, 9, 15, 12, 0, 0, DateTimeKind.Utc);
-        // Venció hace 3 días (gracia es de hasta 5 días)
+        // Venció hace 2 días (gracia es de hasta 3 días)
         var sub = TenantSubscription.Crear(
             tenantId: Guid.NewGuid(),
             planId: 1,
             frecuencia: "MENSUAL",
             fechaInicio: hoy.AddMonths(-1),
-            fechaVencimiento: hoy.AddDays(-3)
+            fechaVencimiento: hoy.AddDays(-2)
         );
 
         sub.EstaVigente(hoy).ShouldBeTrue();
@@ -63,16 +63,16 @@ public class TenantSubscriptionTests
     }
 
     [Test]
-    public void EstaVigente_VencidaMasDe5Dias_DebeRetornarFalse()
+    public void EstaVigente_VencidaMasDe3Dias_DebeRetornarFalse()
     {
         var hoy = new DateTime(2026, 9, 15, 12, 0, 0, DateTimeKind.Utc);
-        // Venció hace 6 días (fuera de periodo de gracia)
+        // Venció hace 4 días (fuera de periodo de gracia)
         var sub = TenantSubscription.Crear(
             tenantId: Guid.NewGuid(),
             planId: 1,
             frecuencia: "MENSUAL",
             fechaInicio: hoy.AddMonths(-1),
-            fechaVencimiento: hoy.AddDays(-6)
+            fechaVencimiento: hoy.AddDays(-4)
         );
 
         sub.EstaVigente(hoy).ShouldBeFalse();

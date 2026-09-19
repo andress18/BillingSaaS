@@ -12,7 +12,7 @@ public class TenantSubscription : BaseAuditableEntity
     public DateTime FechaVencimiento { get; private set; }
     public string Frecuencia { get; private set; } = "MENSUAL"; // "MENSUAL", "ANUAL"
     public string Estado { get; private set; } = "ACTIVO";      // "ACTIVO", "PERIODO_GRACIA", "VENCIDO", "CANCELADO"
-    public int DiasGracia { get; private set; } = 5;
+    public int DiasGracia { get; private set; } = 3;
 
     private TenantSubscription() { }
 
@@ -22,7 +22,7 @@ public class TenantSubscription : BaseAuditableEntity
         DateTime fechaInicio,
         DateTime fechaVencimiento,
         string frecuencia = "MENSUAL",
-        int diasGracia = 5)
+        int diasGracia = 3)
     {
         return tenantId == Guid.Empty
             ? throw new ArgumentException("El TenantId es obligatorio.", nameof(tenantId))
@@ -87,14 +87,23 @@ public class TenantSubscription : BaseAuditableEntity
         Estado = "ACTIVO";
     }
 
-    public void CambiarPlan(int nuevoPlanId, string nuevaFrecuencia, DateTime nuevaFechaVencimiento)
+    public void ExtenderVigencia(string frecuencia, DateTime fechaActualUtc)
+    {
+        Frecuencia = frecuencia.Trim().ToUpperInvariant();
+        var baseDate = FechaVencimiento > fechaActualUtc ? FechaVencimiento : fechaActualUtc;
+        FechaVencimiento = Frecuencia == "ANUAL" ? baseDate.AddYears(1) : baseDate.AddMonths(1);
+        Estado = "ACTIVO";
+    }
+
+    public void CambiarPlan(int nuevoPlanId, string nuevaFrecuencia, DateTime fechaActualUtc)
     {
         if (nuevoPlanId <= 0)
             throw new ArgumentException("El nuevo PlanId debe ser válido.", nameof(nuevoPlanId));
 
         PlanId = nuevoPlanId;
         Frecuencia = nuevaFrecuencia.Trim().ToUpperInvariant();
-        FechaVencimiento = nuevaFechaVencimiento;
+        FechaInicio = fechaActualUtc;
+        FechaVencimiento = Frecuencia == "ANUAL" ? fechaActualUtc.AddYears(1) : fechaActualUtc.AddMonths(1);
         Estado = "ACTIVO";
     }
 
