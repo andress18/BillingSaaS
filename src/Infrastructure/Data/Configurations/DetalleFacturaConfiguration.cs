@@ -18,6 +18,18 @@ public class DetalleFacturaConfiguration : IEntityTypeConfiguration<DetalleFactu
             .HasMaxLength(300)
             .IsRequired();
 
+        builder.Property(d => d.Cantidad)
+            .HasPrecision(18, 4);
+
+        builder.Property(d => d.PrecioUnitario)
+            .HasPrecision(18, 4);
+
+        builder.Property(d => d.Descuento)
+            .HasPrecision(18, 2);
+
+        builder.Property(d => d.PrecioTotalSinImpuesto)
+            .HasPrecision(18, 2);
+
         builder.OwnsMany(d => d.Impuestos, a =>
         {
             a.ToJson();

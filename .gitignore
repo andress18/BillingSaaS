@@ -490,3 +490,7 @@ $RECYCLE.BIN/
 *.db
 *.db-shm
 *.db-wal
+
+# Production configuration and secrets
+appsettings.Production.json
+appsettings.*.local.json
