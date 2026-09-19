@@ -1,3 +1,4 @@
+using BillingSaaS.Application.Common.Interfaces;
 using BillingSaaS.Application.Suscripciones.Commands.AprobarRenovacion;
 using BillingSaaS.Application.Suscripciones.Commands.RechazarRenovacion;
 using BillingSaaS.Application.Suscripciones.Commands.RenovarSuscripcion;
@@ -6,9 +7,11 @@ using BillingSaaS.Application.Suscripciones.Queries.GetPlanes;
 using BillingSaaS.Application.Suscripciones.Queries.GetSolicitudesRenovacion;
 using BillingSaaS.Application.Suscripciones.Queries.GetTenantSubscription;
 using BillingSaaS.Domain.Constants;
+using BillingSaaS.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace BillingSaaS.Web.Endpoints;
 
@@ -28,6 +31,9 @@ public class Suscripciones : IEndpointGroup
 
         // Activación directa (para integración o testing)
         groupBuilder.MapPost(RenovarDirecto, "activar-directo").RequireAuthorization();
+
+        // Testing / Simulación de vencimiento (para desarrollo del Frontend)
+        groupBuilder.MapPost(SimularVencimiento, "simular-vencimiento").RequireAuthorization();
 
         // Endpoints administrativos para validar y aprobar pagos por transferencia
         groupBuilder.MapGet(GetSolicitudes, "solicitudes")
@@ -96,5 +102,26 @@ public class Suscripciones : IEndpointGroup
     {
         await sender.Send(new RechazarRenovacionCommand(id, request.Motivo));
         return TypedResults.Ok();
+    }
+
+    [EndpointSummary("Dev/Testing: Simular vencimiento de suscripción")]
+    [EndpointDescription("Ajusta los días de vigencia de la suscripción del tenant actual para probar estados: vencido (diasOffset < -3), en gracia (-1 a -3) o activo (> 0).")]
+    public static async Task<Ok<TenantSubscriptionDto>> SimularVencimiento(
+        ISender sender,
+        IApplicationDbContext context,
+        IUser user,
+        [FromQuery] int diasOffset = -10)
+    {
+        var tenantId = user.TenantId ?? Guid.Empty;
+        var sub = await context.Suscripciones.FirstOrDefaultAsync(s => s.TenantId == tenantId);
+        if (sub != null)
+        {
+            typeof(TenantSubscription).GetProperty(nameof(TenantSubscription.FechaVencimiento))
+                ?.SetValue(sub, DateTime.UtcNow.AddDays(diasOffset));
+            await context.SaveChangesAsync(CancellationToken.None);
+        }
+
+        var response = await sender.Send(new GetTenantSubscriptionQuery());
+        return TypedResults.Ok(response);
     }
 }
