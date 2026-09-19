@@ -89,5 +89,11 @@ public class Plan : BaseAuditableEntity
 
     public void Desactivar() => Activo = false;
     public void Activar() => Activo = true;
+
+    public void ActualizarPrecios(decimal precioMensual, decimal precioAnual)
+    {
+        PrecioMensual = Math.Max(0m, precioMensual);
+        PrecioAnual = Math.Max(0m, precioAnual);
+    }
 }
 

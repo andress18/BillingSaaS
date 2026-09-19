@@ -264,78 +264,71 @@ public class ApplicationDbContextInitialiser
 
         await _context.SaveChangesAsync();
 
-        // Seed Catálogo de Planes
-        if (!await _context.Planes.AnyAsync())
+        // Seed Catálogo de Planes: Únicamente los dos planes de migración
+        var planMigracionSistema = await _context.Planes.FirstOrDefaultAsync(p => p.Codigo == "MIGRACION_SISTEMA");
+        if (planMigracionSistema == null)
         {
-            var planes = new List<Plan>
-            {
-                // 1. Plan Legado ($45 anuales, límite 300 docs/año, 1 sucursal, docs: 01,04, oculto/no público)
-                Plan.Crear(
-                    codigo: "LEGACY",
-                    nombre: "Plan Legado",
-                    descripcion: "Plan especial reservado para clientes antiguos con tarifa anual preferencial y límite de uso justo.",
-                    precioMensual: 4.50m,
-                    precioAnual: 45.00m,
-                    maxDocumentosMensuales: null,
-                    maxDocumentosAnuales: 300,
-                    maxEstablecimientos: 1,
-                    tiposDocumentosPermitidos: "01,04",
-                    esPublico: false
-                ),
-                // 2. Plan Emprendedor ($5/mes o $50/año, 1 sucursal, hasta 30 facturas/mes)
-                Plan.Crear(
-                    codigo: "EMPRENDEDOR",
-                    nombre: "Emprendedor",
-                    descripcion: "Ideal para profesionales y pequeños negocios que inician en la facturación electrónica.",
-                    precioMensual: 5.00m,
-                    precioAnual: 50.00m,
-                    maxDocumentosMensuales: 30,
-                    maxDocumentosAnuales: 360,
-                    maxEstablecimientos: 1,
-                    tiposDocumentosPermitidos: "01,04",
-                    esPublico: true
-                ),
-                // 3. Plan Comercio Pro ($10/mes o $99/año, facturación ilimitada)
-                Plan.Crear(
-                    codigo: "COMERCIO_PRO",
-                    nombre: "Comercio Pro",
-                    descripcion: "Para negocios consolidados que requieren facturación electrónica ilimitada y notas de crédito/débito.",
-                    precioMensual: 10.00m,
-                    precioAnual: 99.00m,
-                    maxDocumentosMensuales: null,
-                    maxDocumentosAnuales: null,
-                    maxEstablecimientos: 1,
-                    tiposDocumentosPermitidos: "01,04,05",
-                    esPublico: true
-                ),
-                // 4. Plan PYME Multi-sucursal ($25/mes o $250/año, hasta 3 establecimientos y guías de remisión)
-                Plan.Crear(
-                    codigo: "PYME_MULTI",
-                    nombre: "PYME Multi-sucursal",
-                    descripcion: "Control multi-establecimiento integral con guías de remisión y liquidaciones de compra.",
-                    precioMensual: 25.00m,
-                    precioAnual: 250.00m,
-                    maxDocumentosMensuales: null,
-                    maxDocumentosAnuales: null,
-                    maxEstablecimientos: 3,
-                    tiposDocumentosPermitidos: "01,03,04,05,06",
-                    esPublico: true
-                )
-            };
-
-            _context.Planes.AddRange(planes);
-            await _context.SaveChangesAsync();
+            planMigracionSistema = Plan.Crear(
+                codigo: "MIGRACION_SISTEMA",
+                nombre: "Plan Migración (Solo Sistema)",
+                descripcion: "Uso del sistema para clientes que ya disponen de su firma electrónica (.p12) activa.",
+                precioMensual: 3.00m,
+                precioAnual: 20.00m,
+                maxDocumentosMensuales: null,
+                maxDocumentosAnuales: null,
+                maxEstablecimientos: 1,
+                tiposDocumentosPermitidos: "01,04",
+                esPublico: true
+            );
+            _context.Planes.Add(planMigracionSistema);
         }
+        else
+        {
+            planMigracionSistema.ActualizarPrecios(3.00m, 20.00m);
+        }
+
+        var planMigracionFirma = await _context.Planes.FirstOrDefaultAsync(p => p.Codigo == "MIGRACION_FIRMA");
+        if (planMigracionFirma == null)
+        {
+            planMigracionFirma = Plan.Crear(
+                codigo: "MIGRACION_FIRMA",
+                nombre: "Plan Migración + Firma Digital",
+                descripcion: "Uso del sistema e incluye trámite y emisión de firma digital .p12 ($15 sistema + $30 firma anual).",
+                precioMensual: 5.00m,
+                precioAnual: 45.00m,
+                maxDocumentosMensuales: null,
+                maxDocumentosAnuales: null,
+                maxEstablecimientos: 1,
+                tiposDocumentosPermitidos: "01,04",
+                esPublico: true
+            );
+            _context.Planes.Add(planMigracionFirma);
+        }
+        else
+        {
+            planMigracionFirma.ActualizarPrecios(5.00m, 45.00m);
+        }
+
+        // Desactivar cualquier otro plan que no sea de migración
+        var otrosPlanes = await _context.Planes
+            .Where(p => p.Codigo != "MIGRACION_SISTEMA" && p.Codigo != "MIGRACION_FIRMA" && p.Activo)
+            .ToListAsync();
+        foreach (var p in otrosPlanes)
+        {
+            p.Desactivar();
+        }
+
+        await _context.SaveChangesAsync();
 
         // Seed Suscripción Activa para el Tenant demo
         if (!await _context.Suscripciones.AnyAsync(s => s.TenantId == defaultTenantId))
         {
-            var planComercioPro = await _context.Planes.FirstOrDefaultAsync(p => p.Codigo == "COMERCIO_PRO");
-            if (planComercioPro != null)
+            var planDefault = planMigracionSistema ?? await _context.Planes.FirstOrDefaultAsync(p => p.Codigo == "MIGRACION_SISTEMA");
+            if (planDefault != null)
             {
                 var suscripcion = TenantSubscription.Crear(
                     tenantId: defaultTenantId,
-                    planId: planComercioPro.Id,
+                    planId: planDefault.Id,
                     fechaInicio: DateTime.UtcNow.AddMonths(-1),
                     fechaVencimiento: DateTime.UtcNow.AddMonths(11),
                     frecuencia: "ANUAL",

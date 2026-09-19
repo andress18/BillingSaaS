@@ -20,12 +20,9 @@ public class GetTenantSubscriptionTests : TestBase
         var planes = await TestApp.SendAsync(new GetPlanesQuery());
 
         planes.ShouldNotBeNull();
-        planes.Count.ShouldBeGreaterThanOrEqualTo(3);
-        planes.ShouldContain(p => p.Codigo == "EMPRENDEDOR");
-        planes.ShouldContain(p => p.Codigo == "COMERCIO_PRO");
-        planes.ShouldContain(p => p.Codigo == "PYME_MULTI");
-        // El plan LEGACY es privado y no debe figurar en el catálogo público
-        planes.ShouldNotContain(p => p.Codigo == "LEGACY");
+        planes.Count.ShouldBe(2);
+        planes.ShouldContain(p => p.Codigo == "MIGRACION_SISTEMA");
+        planes.ShouldContain(p => p.Codigo == "MIGRACION_FIRMA");
     }
 
     [Test]
@@ -36,7 +33,7 @@ public class GetTenantSubscriptionTests : TestBase
 
         // Obtener un plan existente
         var planes = await TestApp.SendAsync(new GetPlanesQuery());
-        var plan = planes.First(p => p.Codigo == "COMERCIO_PRO");
+        var plan = planes.First(p => p.Codigo == "MIGRACION_SISTEMA");
 
         var hoy = DateTime.UtcNow;
         var sub = TenantSubscription.Crear(
@@ -44,7 +41,7 @@ public class GetTenantSubscriptionTests : TestBase
             plan.Id,
             hoy.AddDays(-5),
             hoy.AddDays(25),
-            "MENSUAL"
+            "ANUAL"
         );
         await TestApp.AddAsync(sub);
 
@@ -52,8 +49,8 @@ public class GetTenantSubscriptionTests : TestBase
         var result = await TestApp.SendAsync(query);
 
         result.ShouldNotBeNull();
-        result.PlanCodigo.ShouldBe("COMERCIO_PRO");
-        result.PlanNombre.ShouldBe("Comercio Pro");
+        result.PlanCodigo.ShouldBe("MIGRACION_SISTEMA");
+        result.PlanNombre.ShouldBe("Plan Migración (Solo Sistema)");
         result.EsIlimitado.ShouldBeTrue();
         result.Estado.ShouldBe("ACTIVO");
         result.DiasRestantes.ShouldBeGreaterThan(0);
@@ -78,8 +75,8 @@ public class GetTenantSubscriptionTests : TestBase
         await TestApp.RunAsUserAsync("upgrade_test@local", "Password123!", [], tenantId);
 
         var planes = await TestApp.SendAsync(new GetPlanesQuery());
-        var planInicial = planes.First(p => p.Codigo == "EMPRENDEDOR");
-        var planNuevo = planes.First(p => p.Codigo == "COMERCIO_PRO");
+        var planInicial = planes.First(p => p.Codigo == "MIGRACION_SISTEMA");
+        var planNuevo = planes.First(p => p.Codigo == "MIGRACION_FIRMA");
 
         var hoy = DateTime.UtcNow;
         var sub = TenantSubscription.Crear(
@@ -87,7 +84,7 @@ public class GetTenantSubscriptionTests : TestBase
             planInicial.Id,
             hoy.AddDays(-20),
             hoy.AddDays(10),
-            "MENSUAL"
+            "ANUAL"
         );
         await TestApp.AddAsync(sub);
 
@@ -98,8 +95,8 @@ public class GetTenantSubscriptionTests : TestBase
         });
 
         renovarResult.ShouldNotBeNull();
-        renovarResult.PlanCodigo.ShouldBe("COMERCIO_PRO");
-        renovarResult.PlanNombre.ShouldBe("Comercio Pro");
+        renovarResult.PlanCodigo.ShouldBe("MIGRACION_FIRMA");
+        renovarResult.PlanNombre.ShouldBe("Plan Migración + Firma Digital");
         renovarResult.EsIlimitado.ShouldBeTrue();
         renovarResult.Estado.ShouldBe("ACTIVO");
         renovarResult.DiasRestantes.ShouldBeGreaterThan(300);
