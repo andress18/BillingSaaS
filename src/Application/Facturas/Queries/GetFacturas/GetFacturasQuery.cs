@@ -1,10 +1,12 @@
 using BillingSaaS.Application.Common.Interfaces;
 using BillingSaaS.Application.Common.Models;
+using BillingSaaS.Domain.Constants;
 
 namespace BillingSaaS.Application.Facturas.Queries.GetFacturas;
 
 public record GetFacturasQuery : IRequest<PaginatedList<FacturaBriefDto>>
 {
+    public Guid? TenantId { get; init; }
     public int? EmisorId { get; init; }
     public string? Estado { get; init; }
     public string? IdentificacionComprador { get; init; }
@@ -19,16 +21,31 @@ public class GetFacturasQueryHandler : IRequestHandler<GetFacturasQuery, Paginat
 {
     private readonly IApplicationDbContext _context;
     private readonly IMapper _mapper;
+    private readonly IUser _user;
 
-    public GetFacturasQueryHandler(IApplicationDbContext context, IMapper mapper)
+    public GetFacturasQueryHandler(IApplicationDbContext context, IMapper mapper, IUser user)
     {
         _context = context;
         _mapper = mapper;
+        _user = user;
     }
 
     public async Task<PaginatedList<FacturaBriefDto>> Handle(GetFacturasQuery request, CancellationToken cancellationToken)
     {
         var query = _context.Facturas.AsNoTracking();
+
+        var isAdmin = _user.Roles?.Contains(Roles.Administrator) == true;
+        if (!isAdmin)
+        {
+            if (_user.TenantId.HasValue && _user.TenantId.Value != Guid.Empty)
+            {
+                query = query.Where(f => f.TenantId == _user.TenantId.Value);
+            }
+        }
+        else if (request.TenantId.HasValue)
+        {
+            query = query.Where(f => f.TenantId == request.TenantId.Value);
+        }
 
         if (request.EmisorId.HasValue)
         {

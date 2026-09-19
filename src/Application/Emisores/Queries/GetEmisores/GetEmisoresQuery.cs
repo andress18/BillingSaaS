@@ -31,6 +31,10 @@ public class GetEmisoresQueryHandler : IRequestHandler<GetEmisoresQuery, List<Em
         {
             query = query.Where(e => e.TenantId == tenantId.Value);
         }
+        else if (_user.Roles?.Contains(BillingSaaS.Domain.Constants.Roles.Administrator) != true)
+        {
+            return [];
+        }
 
         return await query
             .OrderBy(e => e.RazonSocial)

@@ -42,6 +42,24 @@ public class IdentityService : IIdentityService
         return (result.ToApplicationResult(), user.Id);
     }
 
+    public async Task<(Result Result, string UserId)> CreateUserWithTenantAsync(string userName, string password, Guid tenantId, string? role = null)
+    {
+        var user = new ApplicationUser
+        {
+            UserName = userName,
+            Email = userName,
+            TenantId = tenantId
+        };
+
+        var result = await _userManager.CreateAsync(user, password);
+        if (result.Succeeded && !string.IsNullOrWhiteSpace(role))
+        {
+            await _userManager.AddToRoleAsync(user, role);
+        }
+
+        return (result.ToApplicationResult(), user.Id);
+    }
+
     public async Task<bool> IsInRoleAsync(string userId, string role)
     {
         var user = await _userManager.FindByIdAsync(userId);
