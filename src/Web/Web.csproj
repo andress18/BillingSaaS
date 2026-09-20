@@ -3,6 +3,7 @@
   <PropertyGroup>
     <RootNamespace>BillingSaaS.Web</RootNamespace>
     <AssemblyName>BillingSaaS.Web</AssemblyName>
+    <UserSecretsId>1351d78f-960d-40a1-992c-b0197076b041</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

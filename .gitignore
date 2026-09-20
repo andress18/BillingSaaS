@@ -491,6 +491,5 @@ $RECYCLE.BIN/
 *.db-shm
 *.db-wal
 
-# Production configuration and secrets
-appsettings.Production.json
+# Local secret overrides
 appsettings.*.local.json
