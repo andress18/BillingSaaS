@@ -8,6 +8,9 @@ using BillingSaaS.Application.Facturas.Queries.GetFacturas;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 
+using BillingSaaS.Application.Facturas.Commands.EnviarFacturaEmail;
+using Microsoft.AspNetCore.Mvc;
+
 namespace BillingSaaS.Web.Endpoints;
 
 public class Facturas : IEndpointGroup
@@ -21,6 +24,7 @@ public class Facturas : IEndpointGroup
         groupBuilder.MapGet(ConsultarAutorizacion, "{claveAcceso}/autorizacion");
         groupBuilder.MapGet(DescargarPdf, "{id:int}/pdf");
         groupBuilder.MapGet(DescargarXml, "{id:int}/xml");
+        groupBuilder.MapPost(EnviarCorreo, "{id:int}/enviar-correo");
     }
 
     [EndpointSummary("Listar facturas electrónicas")]
@@ -68,6 +72,14 @@ public class Facturas : IEndpointGroup
 
         httpContext.Response.Headers.ContentDisposition = $"attachment; filename=\"{result.FileName}\"";
         return Results.File(result.Content, result.ContentType);
+    }
+
+    [EndpointSummary("Enviar o reenviar factura por correo")]
+    [EndpointDescription("Envía la representación impresa (RIDE PDF) y el archivo XML firmado al correo del comprador o a un correo alternativo especificado.")]
+    public static async Task<IResult> EnviarCorreo(ISender sender, int id, [FromQuery] string? emailDestino)
+    {
+        var result = await sender.Send(new EnviarFacturaEmailCommand { FacturaId = id, EmailDestino = emailDestino });
+        return TypedResults.Ok(new { Mensaje = "Comprobante procesado para envío por correo.", Enviado = result });
     }
 }
 

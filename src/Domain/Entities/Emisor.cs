@@ -135,6 +135,7 @@ public class Emisor : BaseAuditableEntity
     }
 
     public void ActualizarDatosTributarios(
+        string ruc,
         string razonSocial,
         string direccionMatriz,
         string? nombreComercial = null,
@@ -147,6 +148,9 @@ public class Emisor : BaseAuditableEntity
         string? contribuyenteEspecial = null,
         int secuencialInicial = 0)
     {
+        if (string.IsNullOrWhiteSpace(ruc) || ruc.Length != 13 || !ruc.All(char.IsDigit))
+            throw new ArgumentException("El RUC del emisor debe tener exactamente 13 dígitos numéricos.", nameof(ruc));
+        
         if (string.IsNullOrWhiteSpace(razonSocial) || razonSocial.Length > 300)
             throw new ArgumentException("La razón social es obligatoria y no puede exceder 300 caracteres.", nameof(razonSocial));
 
@@ -170,6 +174,7 @@ public class Emisor : BaseAuditableEntity
             SecuencialFactura = secuencialInicial;
         }
 
+        Ruc = ruc;
         RazonSocial = razonSocial;
         DireccionMatriz = direccionMatriz;
         NombreComercial = nombreComercial;

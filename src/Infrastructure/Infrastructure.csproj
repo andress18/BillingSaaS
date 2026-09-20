@@ -18,6 +18,7 @@
     <PackageReference Include="QuestPDF" />
     <PackageReference Include="Barcoder" />
     <PackageReference Include="Barcoder.Renderer.Svg" />
+    <PackageReference Include="MailKit" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,5 +1,6 @@
 using BillingSaaS.Application.Common.Interfaces;
 using BillingSaaS.Domain.Entities;
+using FluentValidation.Internal;
 using System.Security.Cryptography.X509Certificates;
 
 namespace BillingSaaS.Application.Emisores.Commands.ConfigurarEmisor;
@@ -73,6 +74,7 @@ public class ConfigurarEmisorCommandHandler : IRequestHandler<ConfigurarEmisorCo
         else
         {
             emisor.ActualizarDatosTributarios(
+                ruc: request.Ruc,
                 razonSocial: request.RazonSocial,
                 direccionMatriz: request.DireccionMatriz,
                 nombreComercial: request.NombreComercial,
