@@ -96,6 +96,9 @@ public static class DependencyInjection
         // Servicio criptográfico de custodia y cifrado en reposo para certificados digitales (LOPDP / OWASP / NIST SP 800-38D)
         builder.Services.AddSingleton<ICertificateEncryptionService, AesGcmCertificateEncryptionService>();
 
+        // Servicio de Envío de Comprobantes por Correo (Brevo / SMTP con MailKit)
+        builder.Services.AddTransient<IEmailService, MailKitEmailService>();
+
         // Clientes SOAP SRI con HttpClient tipado y protocolo TLS 1.2 explícito para servidores estatales
         builder.Services.AddHttpClient<ISriRecepcionService, SriRecepcionService>(client =>
         {

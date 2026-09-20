@@ -2,6 +2,7 @@ using BillingSaaS.Application.Common.Interfaces;
 using BillingSaaS.Domain.Constants;
 using BillingSaaS.Domain.Entities;
 using BillingSaaS.Infrastructure.Identity;
+using FluentValidation.Internal;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -381,6 +382,7 @@ public class ApplicationDbContextInitialiser
         else
         {
             emisorPartner.ActualizarDatosTributarios(
+                ruc: "0957790108001",
                 razonSocial: "Gorky",
                 direccionMatriz: emisorPartner.DireccionMatriz,
                 nombreComercial: "Gorky",

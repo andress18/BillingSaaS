@@ -49,5 +49,6 @@
     <PackageVersion Include="QuestPDF" Version="2026.9.0" />
     <PackageVersion Include="Barcoder" Version="3.0.0" />
     <PackageVersion Include="Barcoder.Renderer.Svg" Version="3.0.0" />
+    <PackageVersion Include="MailKit" Version="4.18.0" />
   </ItemGroup>
 </Project>
