@@ -110,6 +110,7 @@ public class Factura : BaseAuditableEntity
     // 3. DETALLES (Líneas de la factura)
     // ==========================================
     public Comprador Cliente { get; private init; } = null!;
+    public Guid? CatalogoClienteId { get; private set; }
     public IReadOnlyCollection<DetalleFactura> Detalles => _detalles.AsReadOnly();
     private List<DetalleFactura> _detalles = [];
 
@@ -122,7 +123,8 @@ public class Factura : BaseAuditableEntity
         string establecimiento, string puntoEmision, string secuencial, 
         string direccionMatriz, DateTime fechaEmision, Comprador cliente, 
         List<DetalleFactura> detalles, int emisorId = 0,
-        string? contribuyenteRimpe = null)
+        string? contribuyenteRimpe = null,
+        Guid? catalogoClienteId = null)
     {
         var factura = new Factura
         {
@@ -140,6 +142,7 @@ public class Factura : BaseAuditableEntity
             ContribuyenteRimpe = Constants.RegimenRimpeTipos.Normalizar(contribuyenteRimpe),
             FechaEmision = fechaEmision,
             Estado = "CREADA",
+            CatalogoClienteId = catalogoClienteId,
         
             // Delegamos toda la información del adquirente al objeto compuesto
             Cliente = cliente,
@@ -158,6 +161,8 @@ public class Factura : BaseAuditableEntity
 
         return factura;
     }
+
+    public void AsignarCatalogoCliente(Guid catalogoClienteId) => CatalogoClienteId = catalogoClienteId;
 
     public void MarcarComoRecibida()
     {

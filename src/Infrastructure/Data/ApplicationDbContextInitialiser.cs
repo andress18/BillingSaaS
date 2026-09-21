@@ -85,6 +85,66 @@ public class ApplicationDbContextInitialiser
                             {
                                 await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Facturas ADD COLUMN ContribuyenteRimpe TEXT;");
                             }
+
+                            if (!columnasExistentes.Contains("CatalogoClienteId"))
+                            {
+                                await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Facturas ADD COLUMN CatalogoClienteId TEXT;");
+                            }
+
+                            // Asegurar CatalogoProductoId en DetalleFactura
+                            using var cmdDetalle = connection.CreateCommand();
+                            cmdDetalle.CommandText = "PRAGMA table_info(DetalleFactura);";
+                            var colsDetalle = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                            using (var readerDetalle = await cmdDetalle.ExecuteReaderAsync())
+                            {
+                                while (await readerDetalle.ReadAsync())
+                                {
+                                    colsDetalle.Add(readerDetalle.GetString(1));
+                                }
+                            }
+
+                            if (!colsDetalle.Contains("CatalogoProductoId"))
+                            {
+                                await _context.Database.ExecuteSqlRawAsync("ALTER TABLE DetalleFactura ADD COLUMN CatalogoProductoId TEXT;");
+                            }
+
+                            // Asegurar creación de tablas e índices del catálogo maestro
+                            await _context.Database.ExecuteSqlRawAsync(@"
+                                CREATE TABLE IF NOT EXISTS CatalogoClientes (
+                                    Id TEXT NOT NULL PRIMARY KEY,
+                                    TenantId TEXT NOT NULL,
+                                    TipoIdentificacion TEXT NOT NULL,
+                                    Identificacion TEXT NOT NULL,
+                                    RazonSocial TEXT NOT NULL,
+                                    Direccion TEXT NULL,
+                                    CorreoElectronico TEXT NULL,
+                                    Activo INTEGER NOT NULL,
+                                    Created TEXT NOT NULL,
+                                    CreatedBy TEXT NULL,
+                                    LastModified TEXT NOT NULL,
+                                    LastModifiedBy TEXT NULL
+                                );
+                                CREATE INDEX IF NOT EXISTS IX_CatalogoClientes_TenantId_Identificacion ON CatalogoClientes (TenantId, Identificacion);
+                                CREATE INDEX IF NOT EXISTS IX_CatalogoClientes_TenantId_RazonSocial ON CatalogoClientes (TenantId, RazonSocial);
+
+                                CREATE TABLE IF NOT EXISTS CatalogoProductos (
+                                    Id TEXT NOT NULL PRIMARY KEY,
+                                    TenantId TEXT NOT NULL,
+                                    CodigoPrincipal TEXT NOT NULL,
+                                    Descripcion TEXT NOT NULL,
+                                    PrecioUnitario TEXT NOT NULL,
+                                    CodigoImpuesto TEXT NOT NULL,
+                                    CodigoPorcentaje TEXT NOT NULL,
+                                    Tarifa TEXT NOT NULL,
+                                    Activo INTEGER NOT NULL,
+                                    Created TEXT NOT NULL,
+                                    CreatedBy TEXT NULL,
+                                    LastModified TEXT NOT NULL,
+                                    LastModifiedBy TEXT NULL
+                                );
+                                CREATE INDEX IF NOT EXISTS IX_CatalogoProductos_TenantId_CodigoPrincipal ON CatalogoProductos (TenantId, CodigoPrincipal);
+                                CREATE INDEX IF NOT EXISTS IX_CatalogoProductos_TenantId_Descripcion ON CatalogoProductos (TenantId, Descripcion);
+                            ");
                         }
                         finally
                         {
