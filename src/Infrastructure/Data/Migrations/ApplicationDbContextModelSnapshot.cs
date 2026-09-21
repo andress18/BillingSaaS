@@ -74,7 +74,8 @@ namespace BillingSaaS.Infrastructure.Data.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("Cantidad")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("CodigoPrincipal")
                         .IsRequired()
@@ -93,6 +94,7 @@ namespace BillingSaaS.Infrastructure.Data.Migrations
                         .HasColumnType("nvarchar(300)");
 
                     b.Property<decimal>("Descuento")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("FacturaId")
@@ -105,10 +107,12 @@ namespace BillingSaaS.Infrastructure.Data.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("PrecioTotalSinImpuesto")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("PrecioUnitario")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.HasKey("Id");
 
@@ -200,6 +204,9 @@ namespace BillingSaaS.Infrastructure.Data.Migrations
                     b.Property<int>("SecuencialFactura")
                         .HasColumnType("int");
 
+                    b.Property<int>("SecuencialNotaDebito")
+                        .HasColumnType("int");
+
                     b.Property<string>("SubjectCertificado")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -275,6 +282,7 @@ namespace BillingSaaS.Infrastructure.Data.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("ImporteTotal")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTimeOffset>("LastModified")
@@ -324,9 +332,11 @@ namespace BillingSaaS.Infrastructure.Data.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("TotalDescuento")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("TotalSinImpuestos")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("XmlFirmado")
@@ -339,6 +349,294 @@ namespace BillingSaaS.Infrastructure.Data.Migrations
                     b.HasIndex("EmisorId");
 
                     b.ToTable("Facturas");
+                });
+
+            modelBuilder.Entity("BillingSaaS.Domain.Entities.ImpuestoNotaDebito", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("BaseImponible")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
+                    b.Property<string>("CodigoPorcentaje")
+                        .IsRequired()
+                        .HasMaxLength(4)
+                        .HasColumnType("nvarchar(4)");
+
+                    b.Property<DateTimeOffset>("Created")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset>("LastModified")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("NotaDebitoId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Tarifa")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal>("Valor")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NotaDebitoId");
+
+                    b.ToTable("ImpuestosNotaDebito", (string)null);
+                });
+
+            modelBuilder.Entity("BillingSaaS.Domain.Entities.MotivoNotaDebito", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset>("Created")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset>("LastModified")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("NotaDebitoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Razon")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<decimal>("Valor")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NotaDebitoId");
+
+                    b.ToTable("MotivosNotaDebito", (string)null);
+                });
+
+            modelBuilder.Entity("BillingSaaS.Domain.Entities.NotaDebito", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Ambiente")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ClaveAcceso")
+                        .IsRequired()
+                        .HasMaxLength(49)
+                        .HasColumnType("nvarchar(49)");
+
+                    b.Property<int?>("ClienteId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CodDoc")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
+                    b.Property<string>("CodDocModificado")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
+                    b.Property<string>("ContribuyenteRimpe")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<DateTimeOffset>("Created")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DireccionMatriz")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<int>("EmisorId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Establecimiento")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("FechaAutorizacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaEmision")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaEmisionDocSustento")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IdentificacionComprador")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTimeOffset>("LastModified")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MensajeErrorSri")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("NumDocModificado")
+                        .IsRequired()
+                        .HasMaxLength(17)
+                        .HasColumnType("nvarchar(17)");
+
+                    b.Property<string>("NumeroAutorizacion")
+                        .HasMaxLength(49)
+                        .HasColumnType("nvarchar(49)");
+
+                    b.Property<string>("PuntoEmision")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<string>("RazonSocial")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("RazonSocialComprador")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("Ruc")
+                        .IsRequired()
+                        .HasMaxLength(13)
+                        .HasColumnType("nvarchar(13)");
+
+                    b.Property<string>("Secuencial")
+                        .IsRequired()
+                        .HasMaxLength(9)
+                        .HasColumnType("nvarchar(9)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("TipoEmision")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TipoIdentificacionComprador")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
+                    b.Property<decimal>("TotalSinImpuestos")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ValorTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("XmlFirmado")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClaveAcceso");
+
+                    b.HasIndex("ClienteId");
+
+                    b.HasIndex("EmisorId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("NotasDebito", (string)null);
+                });
+
+            modelBuilder.Entity("BillingSaaS.Domain.Entities.PagoNotaDebito", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset>("Created")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FormaPago")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
+                    b.Property<DateTimeOffset>("LastModified")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("NotaDebitoId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("Plazo")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("decimal(14,2)");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("UnidadTiempo")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NotaDebitoId");
+
+                    b.ToTable("PagosNotaDebito", (string)null);
                 });
 
             modelBuilder.Entity("BillingSaaS.Domain.Entities.Plan", b =>
@@ -843,6 +1141,49 @@ namespace BillingSaaS.Infrastructure.Data.Migrations
                     b.Navigation("Cliente");
                 });
 
+            modelBuilder.Entity("BillingSaaS.Domain.Entities.ImpuestoNotaDebito", b =>
+                {
+                    b.HasOne("BillingSaaS.Domain.Entities.NotaDebito", null)
+                        .WithMany("Impuestos")
+                        .HasForeignKey("NotaDebitoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("BillingSaaS.Domain.Entities.MotivoNotaDebito", b =>
+                {
+                    b.HasOne("BillingSaaS.Domain.Entities.NotaDebito", null)
+                        .WithMany("Motivos")
+                        .HasForeignKey("NotaDebitoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("BillingSaaS.Domain.Entities.NotaDebito", b =>
+                {
+                    b.HasOne("BillingSaaS.Domain.Entities.Comprador", "Cliente")
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BillingSaaS.Domain.Entities.Emisor", null)
+                        .WithMany()
+                        .HasForeignKey("EmisorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Cliente");
+                });
+
+            modelBuilder.Entity("BillingSaaS.Domain.Entities.PagoNotaDebito", b =>
+                {
+                    b.HasOne("BillingSaaS.Domain.Entities.NotaDebito", null)
+                        .WithMany("Pagos")
+                        .HasForeignKey("NotaDebitoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("BillingSaaS.Domain.Entities.SolicitudRenovacion", b =>
                 {
                     b.HasOne("BillingSaaS.Domain.Entities.Plan", "Plan")
@@ -919,6 +1260,15 @@ namespace BillingSaaS.Infrastructure.Data.Migrations
             modelBuilder.Entity("BillingSaaS.Domain.Entities.Factura", b =>
                 {
                     b.Navigation("Detalles");
+                });
+
+            modelBuilder.Entity("BillingSaaS.Domain.Entities.NotaDebito", b =>
+                {
+                    b.Navigation("Impuestos");
+
+                    b.Navigation("Motivos");
+
+                    b.Navigation("Pagos");
                 });
 #pragma warning restore 612, 618
         }

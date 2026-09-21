@@ -6,5 +6,7 @@ public interface IRidePdfGenerator
 {
     byte[] GenerarFacturaRide(Factura factura, string? logoBase64 = null);
     byte[] GenerarFacturaRide(Factura factura, Emisor? emisor, string? logoBase64 = null);
+    byte[] GenerarNotaDebitoRide(NotaDebito notaDebito, string? logoBase64 = null);
+    byte[] GenerarNotaDebitoRide(NotaDebito notaDebito, Emisor? emisor, string? logoBase64 = null);
 }
 

@@ -18,5 +18,16 @@ public interface IEmailService
         byte[] pdfRide,
         byte[] xmlFirmado,
         CancellationToken cancellationToken = default);
+
+    Task SendNotaDebitoEmailAsync(
+        string toEmail,
+        string razonSocialComprador,
+        string numeroNotaDebito,
+        string razonSocialEmisor,
+        string claveAcceso,
+        decimal valorTotal,
+        byte[] pdfRide,
+        byte[] xmlFirmado,
+        CancellationToken cancellationToken = default);
 }
 

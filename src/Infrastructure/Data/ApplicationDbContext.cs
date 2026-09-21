@@ -14,6 +14,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<Emisor> Emisores => Set<Emisor>();
     public DbSet<Factura> Facturas => Set<Factura>();
+    public DbSet<NotaDebito> NotasDebito => Set<NotaDebito>();
     public DbSet<Plan> Planes => Set<Plan>();
     public DbSet<TenantSubscription> Suscripciones => Set<TenantSubscription>();
     public DbSet<SolicitudRenovacion> SolicitudesRenovacion => Set<SolicitudRenovacion>();
