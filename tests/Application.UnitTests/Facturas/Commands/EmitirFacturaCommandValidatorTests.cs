@@ -81,4 +81,37 @@ public class EmitirFacturaCommandValidatorTests
         result.IsValid.ShouldBeFalse();
         result.Errors.ShouldContain(e => e.PropertyName == nameof(command.Detalles));
     }
+
+    [Test]
+    public void Validar_ConGuardarEnCatalogoYClienteRuc_DebeSerValido()
+    {
+        var command = new EmitirFacturaCommand
+        {
+            EmisorId = 1,
+            GuardarEnCatalogo = true,
+            Cliente = new EmitirFacturaCommand.CompradorDto(
+                TipoIdentificacion: "04",
+                Identificacion: "1790012345001",
+                RazonSocial: "CORPORACION FAVORITA C.A.",
+                Direccion: "Av. General Enriquez",
+                CorreoElectronico: "facturas@cfavorita.ec"
+            ),
+            Detalles =
+            [
+                new EmitirFacturaCommand.DetalleDto(
+                    CodigoPrincipal: "SERV-01",
+                    Descripcion: "Servicio de Logística",
+                    Cantidad: 1,
+                    PrecioUnitario: 50m,
+                    Descuento: 0,
+                    Impuestos: [new EmitirFacturaCommand.ImpuestoDto("2", "4", 15m, 50m)],
+                    CatalogoProductoId: Guid.NewGuid()
+                )
+            ]
+        };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.ShouldBeTrue();
+    }
 }
