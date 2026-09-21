@@ -54,6 +54,25 @@ public class EmisorTests
     }
 
     [Test]
+    public void ObtenerSiguienteSecuencialNotaDebito_DebeIncrementarSecuencialFormateado9Digitos()
+    {
+        var emisor = Emisor.Crear(
+            tenantId: Guid.NewGuid(),
+            ruc: "0957790108001",
+            razonSocial: "FARMACIA SAN JOSE CIA LTDA",
+            direccionMatriz: "Av. Amazonas"
+        );
+        emisor.EstablecerSecuencialNotaDebito(10);
+
+        var sec1 = emisor.ObtenerSiguienteSecuencialNotaDebito();
+        var sec2 = emisor.ObtenerSiguienteSecuencialNotaDebito();
+
+        sec1.ShouldBe("000000011");
+        sec2.ShouldBe("000000012");
+        emisor.SecuencialNotaDebito.ShouldBe(12);
+    }
+
+    [Test]
     public void ConfigurarCertificado_ConDatosValidos_DebeActualizarCertificado()
     {
         var emisor = Emisor.Crear(
