@@ -1,4 +1,5 @@
 using BillingSaaS.Application.Clientes.Commands.ActualizarCliente;
+using BillingSaaS.Application.Clientes.Commands.DesactivarCliente;
 using BillingSaaS.Application.Clientes.Commands.UpsertCliente;
 using BillingSaaS.Application.Clientes.Queries.GetClienteById;
 using BillingSaaS.Application.Clientes.Queries.SearchClientes;
@@ -140,6 +141,26 @@ public class ClientesCqrsTests
 
         result.ShouldNotBeNull();
         result.RazonSocial.ShouldBe("EMPRESA TEST");
+    }
+
+    [Test]
+    public async Task DesactivarCliente_DebeHacerSoftDeleteYExcluirloDeBusquedas()
+    {
+        var cliente = CatalogoCliente.Crear(_tenantId, "04", "1790012345001", "CLIENTE A DESACTIVAR");
+        _context.CatalogoClientes.Add(cliente);
+        await _context.SaveChangesAsync();
+
+        var desactivarHandler = new DesactivarClienteCommandHandler(_context, _userMock.Object);
+        await desactivarHandler.Handle(new DesactivarClienteCommand(cliente.Id), CancellationToken.None);
+
+        var clienteEnDb = await _context.CatalogoClientes.FindAsync([cliente.Id], CancellationToken.None);
+        clienteEnDb.ShouldNotBeNull();
+        clienteEnDb.Activo.ShouldBeFalse();
+
+        // Verificar que el autocompletado no lo devuelve
+        var searchHandler = new SearchClientesQueryHandler(_context, _userMock.Object);
+        var searchResults = await searchHandler.Handle(new SearchClientesQuery("DESACTIVAR"), CancellationToken.None);
+        searchResults.ShouldBeEmpty();
     }
 }
 
