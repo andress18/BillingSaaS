@@ -1,4 +1,4 @@
-﻿namespace BillingSaaS.Domain.Entities;
+namespace BillingSaaS.Domain.Entities;
 
 public class DetalleFactura : BaseAuditableEntity
 {
@@ -14,9 +14,18 @@ public class DetalleFactura : BaseAuditableEntity
 
     public decimal TotalImpuestos => _impuestos.Sum(i => i.Valor);
 
+    public Guid? CatalogoProductoId { get; private set; }
+
     private DetalleFactura() { }
 
-    public static DetalleFactura Crear(string codigoPrincipal, string descripcion, decimal cantidad, decimal precioUnitario, decimal descuento, List<Impuesto> impuestos)
+    public static DetalleFactura Crear(
+        string codigoPrincipal,
+        string descripcion,
+        decimal cantidad,
+        decimal precioUnitario,
+        decimal descuento,
+        List<Impuesto> impuestos,
+        Guid? catalogoProductoId = null)
     {
         if (string.IsNullOrWhiteSpace(codigoPrincipal) || codigoPrincipal.Length > 25)
             throw new ArgumentException("El código principal es obligatorio y debe tener máximo 25 caracteres."); //[cite: 1]
@@ -35,9 +44,12 @@ public class DetalleFactura : BaseAuditableEntity
             PrecioUnitario = precioUnitario,
             Descuento = descuento,
             PrecioTotalSinImpuesto = (cantidad * precioUnitario) - descuento,
-            _impuestos = impuestos
+            _impuestos = impuestos,
+            CatalogoProductoId = catalogoProductoId
         };
 
         return detalle;
     }
+
+    public void AsignarCatalogoProducto(Guid catalogoProductoId) => CatalogoProductoId = catalogoProductoId;
 }
