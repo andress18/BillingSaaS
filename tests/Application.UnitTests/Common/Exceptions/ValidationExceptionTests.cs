@@ -1,4 +1,4 @@
-﻿using BillingSaaS.Application.Common.Exceptions;
+using BillingSaaS.Application.Common.Exceptions;
 using FluentValidation.Results;
 using NUnit.Framework;
 using Shouldly;
@@ -59,5 +59,22 @@ public class ValidationExceptionTests
                 "must contain at least 8 characters",
                 "must contain a digit",
         }, ignoreOrder: true);
+    }
+
+    [Test]
+    public void ValidationExceptionMessageContainsFormattedPropertyErrors()
+    {
+        var failures = new List<ValidationFailure>
+        {
+            new ValidationFailure("Identificacion", "El número de identificación es requerido"),
+            new ValidationFailure("Email", "El email no tiene un formato válido")
+        };
+
+        var exception = new ValidationException(failures);
+
+        exception.Message.ShouldContain("Identificacion");
+        exception.Message.ShouldContain("El número de identificación es requerido");
+        exception.Message.ShouldContain("Email");
+        exception.Message.ShouldContain("El email no tiene un formato válido");
     }
 }
