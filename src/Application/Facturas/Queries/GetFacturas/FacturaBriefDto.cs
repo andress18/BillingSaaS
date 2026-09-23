@@ -15,6 +15,9 @@ public class FacturaBriefDto
     public string TipoIdentificacionComprador { get; init; } = null!;
     public string RazonSocialComprador { get; init; } = null!;
     public string IdentificacionComprador { get; init; } = null!;
+    public string? DireccionComprador { get; init; }
+    public string? CorreoElectronicoComprador { get; init; }
+    public Guid? CatalogoClienteId { get; init; }
     public decimal TotalSinImpuestos { get; init; }
     public decimal TotalDescuento { get; init; }
     public decimal ImporteTotal { get; init; }
@@ -27,7 +30,9 @@ public class FacturaBriefDto
     {
         public Mapping()
         {
-            CreateMap<Factura, FacturaBriefDto>();
+            CreateMap<Factura, FacturaBriefDto>()
+                .ForMember(d => d.DireccionComprador, opt => opt.MapFrom(s => s.Cliente.Direccion))
+                .ForMember(d => d.CorreoElectronicoComprador, opt => opt.MapFrom(s => s.Cliente.CorreoElectronico));
         }
     }
 }
