@@ -3,6 +3,7 @@ using BillingSaaS.Application.Common.Exceptions;
 using BillingSaaS.Application.Common.Interfaces;
 using BillingSaaS.Domain.Entities;
 using BillingSaaS.Domain.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace BillingSaaS.Application.Facturas.Commands.EmitirFactura;
 
@@ -10,6 +11,7 @@ public record EmitirFacturaCommand : IRequest<EmitirFacturaResponseDto>
 {
     public int EmisorId { get; init; }
     public string? RegimenRimpe { get; init; }
+    public bool GuardarEnCatalogo { get; init; } = false;
     public CompradorDto Cliente { get; init; } = null!;
     public List<DetalleDto> Detalles { get; init; } = new();
 
@@ -18,7 +20,8 @@ public record EmitirFacturaCommand : IRequest<EmitirFacturaResponseDto>
         string Identificacion,
         string RazonSocial,
         string? Direccion,
-        string? CorreoElectronico);
+        string? CorreoElectronico,
+        Guid? CatalogoClienteId = null);
 
     public record DetalleDto(
         string CodigoPrincipal,
@@ -26,7 +29,8 @@ public record EmitirFacturaCommand : IRequest<EmitirFacturaResponseDto>
         decimal Cantidad,
         decimal PrecioUnitario,
         decimal Descuento,
-        List<ImpuestoDto> Impuestos);
+        List<ImpuestoDto> Impuestos,
+        Guid? CatalogoProductoId = null);
 
     public record ImpuestoDto(string Codigo, string CodigoPorcentaje, decimal Tarifa, decimal BaseImponible);
 }
@@ -88,6 +92,38 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
         var secuencial = emisor.ObtenerSiguienteSecuencialFactura();
 
         // 3. Crear objetos de valor de Dominio (Comprador, Detalles e Impuestos)
+        Guid? catalogoClienteId = request.Cliente.CatalogoClienteId;
+
+        if (request.GuardarEnCatalogo && request.Cliente.TipoIdentificacion != "07" && request.Cliente.Identificacion != "9999999999999")
+        {
+            var identificacionLimpia = request.Cliente.Identificacion.Trim();
+            var clienteCatalogo = await _context.CatalogoClientes
+                .FirstOrDefaultAsync(c => c.TenantId == emisor.TenantId && c.Identificacion == identificacionLimpia, cancellationToken);
+
+            if (clienteCatalogo != null)
+            {
+                clienteCatalogo.ActualizarContacto(
+                    request.Cliente.RazonSocial,
+                    request.Cliente.Direccion,
+                    request.Cliente.CorreoElectronico,
+                    request.Cliente.TipoIdentificacion);
+                clienteCatalogo.Activar();
+                catalogoClienteId = clienteCatalogo.Id;
+            }
+            else
+            {
+                clienteCatalogo = CatalogoCliente.Crear(
+                    tenantId: emisor.TenantId,
+                    tipoIdentificacion: request.Cliente.TipoIdentificacion,
+                    identificacion: identificacionLimpia,
+                    razonSocial: request.Cliente.RazonSocial,
+                    direccion: request.Cliente.Direccion,
+                    correoElectronico: request.Cliente.CorreoElectronico);
+                _context.CatalogoClientes.Add(clienteCatalogo);
+                catalogoClienteId = clienteCatalogo.Id;
+            }
+        }
+
         var comprador = Comprador.Crear(
             request.Cliente.TipoIdentificacion,
             request.Cliente.Identificacion,
@@ -102,7 +138,8 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
             d.Cantidad,
             d.PrecioUnitario,
             d.Descuento,
-            d.Impuestos.Select(i => Impuesto.Crear(i.Codigo, i.CodigoPorcentaje, i.Tarifa, i.BaseImponible)).ToList()
+            d.Impuestos.Select(i => Impuesto.Crear(i.Codigo, i.CodigoPorcentaje, i.Tarifa, i.BaseImponible)).ToList(),
+            catalogoProductoId: d.CatalogoProductoId
         )).ToList();
 
         // 4. Crear entidad Factura en el huso horario oficial de Ecuador (UTC-5)
@@ -125,7 +162,8 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
             cliente: comprador,
             detalles: detalles,
             emisorId: emisor.Id,
-            contribuyenteRimpe: regimenRimpe
+            contribuyenteRimpe: regimenRimpe,
+            catalogoClienteId: catalogoClienteId
         );
 
         // 5. Generar Clave de Acceso de 49 dígitos con Módulo 11

@@ -9,7 +9,14 @@ namespace BillingSaaS.Infrastructure.Data;
 
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplicationDbContext
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
+    private readonly IUser? _user;
+
+    public ApplicationDbContext(
+        DbContextOptions<ApplicationDbContext> options,
+        IUser? user = null) : base(options)
+    {
+        _user = user;
+    }
 
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<Emisor> Emisores => Set<Emisor>();
@@ -18,11 +25,19 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
     public DbSet<Plan> Planes => Set<Plan>();
     public DbSet<TenantSubscription> Suscripciones => Set<TenantSubscription>();
     public DbSet<SolicitudRenovacion> SolicitudesRenovacion => Set<SolicitudRenovacion>();
-
+    public DbSet<CatalogoCliente> CatalogoClientes => Set<CatalogoCliente>();
+    public DbSet<CatalogoProducto> CatalogoProductos => Set<CatalogoProducto>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
         builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+
+        // Filtro global multi-tenant por TenantId
+        builder.Entity<CatalogoCliente>()
+            .HasQueryFilter(c => _user == null || !_user.TenantId.HasValue || _user.TenantId.Value == Guid.Empty || c.TenantId == _user.TenantId.Value);
+
+        builder.Entity<CatalogoProducto>()
+            .HasQueryFilter(p => _user == null || !_user.TenantId.HasValue || _user.TenantId.Value == Guid.Empty || p.TenantId == _user.TenantId.Value);
     }
 }

@@ -11,6 +11,8 @@ public interface IApplicationDbContext
     DbSet<Plan> Planes { get; }
     DbSet<TenantSubscription> Suscripciones { get; }
     DbSet<SolicitudRenovacion> SolicitudesRenovacion { get; }
+    DbSet<CatalogoCliente> CatalogoClientes { get; }
+    DbSet<CatalogoProducto> CatalogoProductos { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }
