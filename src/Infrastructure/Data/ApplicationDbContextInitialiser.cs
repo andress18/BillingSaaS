@@ -108,7 +108,24 @@ public class ApplicationDbContextInitialiser
                                 await _context.Database.ExecuteSqlRawAsync("ALTER TABLE DetalleFactura ADD COLUMN CatalogoProductoId TEXT;");
                             }
 
-                            // Asegurar creación de tablas e índices del catálogo maestro
+                            // Asegurar SecuencialNotaCredito en Emisores
+                            using var cmdEmisor = connection.CreateCommand();
+                            cmdEmisor.CommandText = "PRAGMA table_info(Emisores);";
+                            var colsEmisor = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                            using (var readerEmisor = await cmdEmisor.ExecuteReaderAsync())
+                            {
+                                while (await readerEmisor.ReadAsync())
+                                {
+                                    colsEmisor.Add(readerEmisor.GetString(1));
+                                }
+                            }
+
+                            if (!colsEmisor.Contains("SecuencialNotaCredito"))
+                            {
+                                await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Emisores ADD COLUMN SecuencialNotaCredito INTEGER NOT NULL DEFAULT 0;");
+                            }
+
+                            // Asegurar creación de tablas e índices del catálogo maestro y notas de crédito
                             await _context.Database.ExecuteSqlRawAsync(@"
                                 CREATE TABLE IF NOT EXISTS CatalogoClientes (
                                     Id TEXT NOT NULL PRIMARY KEY,
@@ -144,6 +161,69 @@ public class ApplicationDbContextInitialiser
                                 );
                                 CREATE INDEX IF NOT EXISTS IX_CatalogoProductos_TenantId_CodigoPrincipal ON CatalogoProductos (TenantId, CodigoPrincipal);
                                 CREATE INDEX IF NOT EXISTS IX_CatalogoProductos_TenantId_Descripcion ON CatalogoProductos (TenantId, Descripcion);
+
+                                CREATE TABLE IF NOT EXISTS NotasCredito (
+                                    Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                                    TenantId TEXT NOT NULL,
+                                    EmisorId INTEGER NOT NULL,
+                                    Estado TEXT NOT NULL,
+                                    NumeroAutorizacion TEXT NULL,
+                                    FechaAutorizacion TEXT NULL,
+                                    MensajeErrorSri TEXT NULL,
+                                    XmlFirmado TEXT NULL,
+                                    Ambiente INTEGER NOT NULL,
+                                    TipoEmision INTEGER NOT NULL,
+                                    RazonSocial TEXT NOT NULL,
+                                    Ruc TEXT NOT NULL,
+                                    ClaveAcceso TEXT NOT NULL,
+                                    CodDoc TEXT NOT NULL,
+                                    Establecimiento TEXT NOT NULL,
+                                    PuntoEmision TEXT NOT NULL,
+                                    Secuencial TEXT NOT NULL,
+                                    DireccionMatriz TEXT NOT NULL,
+                                    ContribuyenteRimpe TEXT NULL,
+                                    CodDocModificado TEXT NOT NULL,
+                                    NumDocModificado TEXT NOT NULL,
+                                    FechaEmisionDocSustento TEXT NOT NULL,
+                                    Motivo TEXT NOT NULL,
+                                    FechaEmision TEXT NOT NULL,
+                                    TipoIdentificacionComprador TEXT NOT NULL,
+                                    RazonSocialComprador TEXT NOT NULL,
+                                    IdentificacionComprador TEXT NOT NULL,
+                                    TotalSinImpuestos TEXT NOT NULL,
+                                    TotalDescuento TEXT NOT NULL,
+                                    ValorModificacion TEXT NOT NULL,
+                                    ClienteId INTEGER NULL,
+                                    CatalogoClienteId TEXT NULL,
+                                    Created TEXT NOT NULL,
+                                    CreatedBy TEXT NULL,
+                                    LastModified TEXT NOT NULL,
+                                    LastModifiedBy TEXT NULL,
+                                    FOREIGN KEY (EmisorId) REFERENCES Emisores (Id) ON DELETE RESTRICT,
+                                    FOREIGN KEY (ClienteId) REFERENCES Comprador (Id) ON DELETE RESTRICT
+                                );
+                                CREATE INDEX IF NOT EXISTS IX_NotasCredito_ClaveAcceso ON NotasCredito (ClaveAcceso);
+                                CREATE INDEX IF NOT EXISTS IX_NotasCredito_TenantId ON NotasCredito (TenantId);
+                                CREATE INDEX IF NOT EXISTS IX_NotasCredito_EmisorId ON NotasCredito (EmisorId);
+
+                                CREATE TABLE IF NOT EXISTS DetallesNotaCredito (
+                                    Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                                    NotaCreditoId INTEGER NOT NULL,
+                                    CodigoPrincipal TEXT NOT NULL,
+                                    Descripcion TEXT NOT NULL,
+                                    Cantidad TEXT NOT NULL,
+                                    PrecioUnitario TEXT NOT NULL,
+                                    Descuento TEXT NOT NULL,
+                                    PrecioTotalSinImpuesto TEXT NOT NULL,
+                                    Impuestos TEXT NOT NULL,
+                                    CatalogoProductoId TEXT NULL,
+                                    Created TEXT NOT NULL,
+                                    CreatedBy TEXT NULL,
+                                    LastModified TEXT NOT NULL,
+                                    LastModifiedBy TEXT NULL,
+                                    FOREIGN KEY (NotaCreditoId) REFERENCES NotasCredito (Id) ON DELETE CASCADE
+                                );
+                                CREATE INDEX IF NOT EXISTS IX_DetallesNotaCredito_NotaCreditoId ON DetallesNotaCredito (NotaCreditoId);
                             ");
                         }
                         finally

@@ -85,6 +85,7 @@ public static class DependencyInjection
         // Servicios de Facturación y Firma SRI
         builder.Services.AddTransient<IFacturaXmlGenerator, FacturaXmlGenerator>();
         builder.Services.AddTransient<INotaDebitoXmlGenerator, NotaDebitoXmlGenerator>();
+        builder.Services.AddTransient<INotaCreditoXmlGenerator, NotaCreditoXmlGenerator>();
         builder.Services.AddTransient<ISriSignatureService, SriSignatureService>();
 
         // Generador de Representación Impresa (RIDE) en PDF (QuestPDF)
