@@ -20,10 +20,10 @@ public class NotasDebito : IEndpointGroup
 
         groupBuilder.MapPost(EmitirNotaDebito);
         groupBuilder.MapGet(GetNotasDebito);
-        groupBuilder.MapGet(ConsultarAutorizacion, "{claveAcceso}/autorizacion");
-        groupBuilder.MapGet(DescargarPdf, "{id:int}/pdf");
-        groupBuilder.MapGet(DescargarXml, "{id:int}/xml");
-        groupBuilder.MapPost(EnviarCorreo, "{id:int}/enviar-correo");
+        groupBuilder.MapGet(ConsultarAutorizacionNotaDebito, "{claveAcceso}/autorizacion");
+        groupBuilder.MapGet(DescargarPdfNotaDebito, "{id:int}/pdf");
+        groupBuilder.MapGet(DescargarXmlNotaDebito, "{id:int}/xml");
+        groupBuilder.MapPost(EnviarCorreoNotaDebito, "{id:int}/enviar-correo");
     }
 
     [EndpointSummary("Listar notas de débito electrónicas")]
@@ -46,7 +46,7 @@ public class NotasDebito : IEndpointGroup
 
     [EndpointSummary("Consultar Autorización de Nota de Débito en el SRI")]
     [EndpointDescription("Consulta el estado de autorización de una nota de débito en los servidores del SRI a partir de su clave de acceso.")]
-    public static async Task<Ok<SriAutorizacionResponseDto>> ConsultarAutorizacion(ISender sender, string claveAcceso)
+    public static async Task<Ok<SriAutorizacionResponseDto>> ConsultarAutorizacionNotaDebito(ISender sender, string claveAcceso)
     {
         var response = await sender.Send(new ConsultarAutorizacionNotaDebitoQuery(claveAcceso));
 
@@ -55,7 +55,7 @@ public class NotasDebito : IEndpointGroup
 
     [EndpointSummary("Descargar RIDE PDF de Nota de Débito")]
     [EndpointDescription("Genera la representación impresa (RIDE) en formato PDF de la nota de débito especificada con disposición inline.")]
-    public static async Task<IResult> DescargarPdf(ISender sender, HttpContext httpContext, int id)
+    public static async Task<IResult> DescargarPdfNotaDebito(ISender sender, HttpContext httpContext, int id)
     {
         var result = await sender.Send(new GetNotaDebitoPdfQuery(id));
 
@@ -65,7 +65,7 @@ public class NotasDebito : IEndpointGroup
 
     [EndpointSummary("Descargar Comprobante XML de Nota de Débito")]
     [EndpointDescription("Obtiene el archivo XML oficial (autorizado o firmado) de la nota de débito electrónica para su descarga o integración contable.")]
-    public static async Task<IResult> DescargarXml(ISender sender, HttpContext httpContext, int id, bool? raw)
+    public static async Task<IResult> DescargarXmlNotaDebito(ISender sender, HttpContext httpContext, int id, bool? raw)
     {
         var result = await sender.Send(new GetNotaDebitoXmlQuery(id, raw ?? false));
 
@@ -75,7 +75,7 @@ public class NotasDebito : IEndpointGroup
 
     [EndpointSummary("Enviar o reenviar nota de débito por correo")]
     [EndpointDescription("Envía la representación impresa (RIDE PDF) y el archivo XML firmado al correo del comprador o a un correo alternativo especificado.")]
-    public static async Task<IResult> EnviarCorreo(ISender sender, int id, [FromQuery] string? emailDestino)
+    public static async Task<IResult> EnviarCorreoNotaDebito(ISender sender, int id, [FromQuery] string? emailDestino)
     {
         var result = await sender.Send(new EnviarNotaDebitoEmailCommand { NotaDebitoId = id, EmailDestino = emailDestino });
         return TypedResults.Ok(new { Mensaje = "Comprobante procesado para envío por correo.", Enviado = result });

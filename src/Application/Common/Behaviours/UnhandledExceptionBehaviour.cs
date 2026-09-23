@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
+using ValidationException = BillingSaaS.Application.Common.Exceptions.ValidationException;
 
 namespace BillingSaaS.Application.Common.Behaviours;
 
@@ -17,6 +18,11 @@ public class UnhandledExceptionBehaviour<TRequest, TResponse> : IPipelineBehavio
         try
         {
             return await next();
+        }
+        catch (ValidationException)
+        {
+            // Las fallas de validación son esperadas y son registradas con detalle en ValidationBehaviour
+            throw;
         }
         catch (Exception ex)
         {
