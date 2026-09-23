@@ -755,6 +755,281 @@ public class RidePdfGenerator : IRidePdfGenerator
         return document.GeneratePdf();
     }
 
+    public byte[] GenerarNotaCreditoRide(NotaCredito notaCredito, string? logoBase64 = null)
+    {
+        return GenerarNotaCreditoRide(notaCredito, emisor: null, logoBase64);
+    }
+
+    public byte[] GenerarNotaCreditoRide(NotaCredito notaCredito, Emisor? emisor, string? logoBase64 = null)
+    {
+        ArgumentNullException.ThrowIfNull(notaCredito);
+
+        // 1. Cálculos de subtotales agrupados por tarifa de IVA según especificaciones SRI
+        var todosImpuestos = notaCredito.Detalles.SelectMany(d => d.Impuestos).ToList();
+
+        var subtotal15 = todosImpuestos
+            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "4" || i.Tarifa == 15m))
+            .Sum(i => i.BaseImponible);
+
+        var subtotal5 = todosImpuestos
+            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "5" || i.Tarifa == 5m))
+            .Sum(i => i.BaseImponible);
+
+        var subtotal0 = todosImpuestos
+            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "0" || i.Tarifa == 0m))
+            .Sum(i => i.BaseImponible);
+
+        if (subtotal15 == 0 && subtotal5 == 0 && subtotal0 == 0 && notaCredito.TotalSinImpuestos > 0)
+        {
+            subtotal15 = notaCredito.TotalSinImpuestos;
+        }
+
+        var iva15 = todosImpuestos
+            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "4" || i.Tarifa == 15m))
+            .Sum(i => i.Valor);
+
+        var iva5 = todosImpuestos
+            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "5" || i.Tarifa == 5m))
+            .Sum(i => i.Valor);
+
+        if (iva15 == 0 && iva5 == 0 && (notaCredito.ValorModificacion - notaCredito.TotalSinImpuestos) > 0)
+        {
+            iva15 = notaCredito.ValorModificacion - notaCredito.TotalSinImpuestos;
+        }
+
+        // 2. Generación vectorial del código de barras
+        string claveAcceso = notaCredito.ClaveAcceso ?? string.Empty;
+        string? barcodeSvg = GenerarCodigoBarrasSvg(claveAcceso);
+
+        // 3. Procesamiento de logo opcional
+        byte[]? logoBytes = null;
+        if (!string.IsNullOrWhiteSpace(logoBase64))
+        {
+            try
+            {
+                var cleanBase64 = logoBase64.Contains(',') ? logoBase64.Split(',')[1] : logoBase64;
+                logoBytes = Convert.FromBase64String(cleanBase64);
+            }
+            catch
+            {
+                logoBytes = null;
+            }
+        }
+
+        // 4. Datos del emisor
+        string razonSocialEmisor = emisor?.RazonSocial ?? notaCredito.RazonSocial ?? "EMISOR ELECTRÓNICO";
+        string? nombreComercialEmisor = emisor?.NombreComercial;
+        string rucEmisor = emisor?.Ruc ?? notaCredito.Ruc ?? "9999999999999";
+        string direccionMatriz = emisor?.DireccionMatriz ?? notaCredito.DireccionMatriz ?? "S/N";
+        string direccionEstablecimiento = emisor?.DireccionEstablecimiento ?? direccionMatriz;
+        bool obligadoContabilidad = emisor?.ObligadoContabilidad ?? false;
+        string? contribuyenteEspecial = emisor?.ContribuyenteEspecial;
+        string? regimenRimpe = emisor?.RegimenRimpe ?? notaCredito.ContribuyenteRimpe;
+
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(20);
+                page.DefaultTextStyle(x => x.FontSize(8).FontColor(Colors.Grey.Darken4));
+
+                page.Content().Column(col =>
+                {
+                    // Encabezado
+                    col.Item().Row(row =>
+                    {
+                        // Columna Izquierda: Emisor
+                        row.RelativeItem(5).Column(leftCol =>
+                        {
+                            if (logoBytes != null)
+                            {
+                                leftCol.Item().MaxHeight(65).MaxWidth(180).Image(logoBytes);
+                                leftCol.Item().PaddingTop(5);
+                            }
+
+                            leftCol.Item().Border(0.8f).BorderColor(Colors.Grey.Medium).CornerRadius(4).Padding(6).Column(emisorBox =>
+                            {
+                                emisorBox.Item().Text(razonSocialEmisor).Bold().FontSize(10);
+                                if (!string.IsNullOrWhiteSpace(nombreComercialEmisor))
+                                    emisorBox.Item().Text(nombreComercialEmisor).FontSize(9).FontColor(Colors.Grey.Darken2);
+
+                                emisorBox.Item().PaddingTop(4).Text($"Dirección Matriz: {direccionMatriz}").FontSize(8);
+                                if (!string.IsNullOrWhiteSpace(direccionEstablecimiento) && direccionEstablecimiento != direccionMatriz)
+                                    emisorBox.Item().Text($"Dirección Sucursal: {direccionEstablecimiento}").FontSize(8);
+
+                                if (!string.IsNullOrWhiteSpace(contribuyenteEspecial))
+                                    emisorBox.Item().Text($"Contribuyente Especial Nro: {contribuyenteEspecial}").FontSize(8);
+
+                                emisorBox.Item().Text($"OBLIGADO A LLEVAR CONTABILIDAD: {(obligadoContabilidad ? "SI" : "NO")}").FontSize(8).Bold();
+
+                                if (!string.IsNullOrWhiteSpace(regimenRimpe))
+                                    emisorBox.Item().PaddingTop(2).Text(regimenRimpe).FontSize(7.5f).Bold();
+                            });
+                        });
+
+                        row.ConstantItem(10);
+
+                        // Columna Derecha: Datos Tributarios Nota de Crédito
+                        row.RelativeItem(5).Border(0.8f).BorderColor(Colors.Grey.Medium).CornerRadius(4).Padding(6).Column(rightCol =>
+                        {
+                            rightCol.Item().Text($"R.U.C.: {rucEmisor}").Bold().FontSize(11);
+                            rightCol.Item().PaddingVertical(2).Text("NOTA DE CRÉDITO").Bold().FontSize(12).FontColor(Colors.Blue.Darken3);
+                            rightCol.Item().Text($"No. {notaCredito.Establecimiento}-{notaCredito.PuntoEmision}-{notaCredito.Secuencial}").FontSize(9.5f).Bold();
+                            rightCol.Item().PaddingTop(3).Text($"NÚMERO DE AUTORIZACIÓN:").FontSize(7.5f);
+                            rightCol.Item().Text(notaCredito.NumeroAutorizacion ?? notaCredito.ClaveAcceso ?? "PENDIENTE").FontSize(7.5f).FontColor(Colors.Grey.Darken3);
+
+                            string fechaAut = notaCredito.FechaAutorizacion?.ToString("dd/MM/yyyy HH:mm:ss")
+                                              ?? DateTime.UtcNow.AddHours(-5).ToString("dd/MM/yyyy HH:mm:ss");
+                            rightCol.Item().PaddingTop(2).Text($"FECHA Y HORA DE AUTORIZACIÓN: {fechaAut}").FontSize(7.5f);
+                            rightCol.Item().Text($"AMBIENTE: {(notaCredito.Ambiente == 2 ? "PRODUCCIÓN" : "PRUEBAS")}").FontSize(8);
+                            rightCol.Item().Text("EMISIÓN: NORMAL").FontSize(8);
+
+                            rightCol.Item().PaddingTop(4).Text("CLAVE DE ACCESO:").Bold().FontSize(7.5f);
+                            if (!string.IsNullOrWhiteSpace(barcodeSvg))
+                            {
+                                rightCol.Item().Height(35).Svg(barcodeSvg);
+                            }
+                            rightCol.Item().AlignCenter().Text(claveAcceso).FontSize(7.5f);
+                        });
+                    });
+
+                    col.Item().PaddingVertical(6);
+
+                    // Información del Comprador y Documento Modificado
+                    col.Item().Border(0.8f).BorderColor(Colors.Grey.Medium).CornerRadius(4).Padding(6).Column(infoBox =>
+                    {
+                        infoBox.Item().Row(r =>
+                        {
+                            r.RelativeItem(7).Text($"Razón Social / Nombres y Apellidos: {notaCredito.RazonSocialComprador}").Bold().FontSize(8.5f);
+                            r.RelativeItem(3).Text($"Identificación: {notaCredito.IdentificacionComprador}").Bold().FontSize(8.5f);
+                        });
+
+                        infoBox.Item().PaddingTop(2).Row(r =>
+                        {
+                            r.RelativeItem(7).Text($"Fecha Emisión: {notaCredito.FechaEmision:dd/MM/yyyy}").FontSize(8);
+                            r.RelativeItem(3).Text($"Comprobante Modificado: FACTURA").Bold().FontSize(8);
+                        });
+
+                        infoBox.Item().PaddingTop(2).Row(r =>
+                        {
+                            r.RelativeItem(7).Text($"No. Comprobante Modificado: {notaCredito.NumDocModificado}").Bold().FontSize(8.5f);
+                            r.RelativeItem(3).Text($"Fecha Emisión Sustento: {notaCredito.FechaEmisionDocSustento:dd/MM/yyyy}").FontSize(8);
+                        });
+
+                        infoBox.Item().PaddingTop(2).Text($"Razón de Modificación: {notaCredito.Motivo}").FontSize(8.5f).Bold();
+                    });
+
+                    col.Item().PaddingVertical(6);
+
+                    // Tabla de Detalles
+                    col.Item().Table(table =>
+                    {
+                        table.ColumnsDefinition(columns =>
+                        {
+                            columns.RelativeColumn(2);    // Cod. Principal
+                            columns.RelativeColumn(1.2f); // Cantidad
+                            columns.RelativeColumn(4.5f); // Descripción
+                            columns.RelativeColumn(1.5f); // Precio Unitario
+                            columns.RelativeColumn(1.3f); // Descuento
+                            columns.RelativeColumn(1.5f); // Precio Total
+                        });
+
+                        // Encabezados
+                        table.Header(header =>
+                        {
+                            void StyleHeader(IContainer cell, string text, bool alignRight = false)
+                            {
+                                var c = cell.Background(Colors.Grey.Lighten2)
+                                            .Border(0.5f)
+                                            .BorderColor(Colors.Grey.Medium)
+                                            .Padding(3);
+                                if (alignRight)
+                                    c.AlignRight().Text(text).Bold().FontSize(7.5f);
+                                else
+                                    c.Text(text).Bold().FontSize(7.5f);
+                            }
+
+                            StyleHeader(header.Cell(), "Cod. Principal");
+                            StyleHeader(header.Cell(), "Cant", true);
+                            StyleHeader(header.Cell(), "Descripción");
+                            StyleHeader(header.Cell(), "Precio Unit.", true);
+                            StyleHeader(header.Cell(), "Descuento", true);
+                            StyleHeader(header.Cell(), "Precio Total", true);
+                        });
+
+                        // Filas
+                        foreach (var det in notaCredito.Detalles)
+                        {
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).Text(det.CodigoPrincipal).FontSize(7.5f);
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).AlignRight().Text(det.Cantidad.ToString("G29")).FontSize(7.5f);
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).Text(det.Descripcion).FontSize(7.5f);
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).AlignRight().Text(det.PrecioUnitario.ToString("F2")).FontSize(7.5f);
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).AlignRight().Text(det.Descuento.ToString("F2")).FontSize(7.5f);
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).AlignRight().Text(det.PrecioTotalSinImpuesto.ToString("F2")).FontSize(7.5f);
+                        }
+                    });
+
+                    col.Item().PaddingVertical(6);
+
+                    // Bloque Inferior: Información Adicional y Cuadro de Totales
+                    col.Item().Row(row =>
+                    {
+                        // Columna Izquierda: Información Adicional
+                        row.RelativeItem(5.5f).Column(infoAdicionalCol =>
+                        {
+                            infoAdicionalCol.Item().Border(0.8f).BorderColor(Colors.Grey.Medium).CornerRadius(4).Padding(6).Column(box =>
+                            {
+                                box.Item().Text("INFORMACIÓN ADICIONAL").Bold().FontSize(8.5f);
+                                if (!string.IsNullOrWhiteSpace(notaCredito.Cliente?.Direccion))
+                                    box.Item().PaddingTop(2).Text($"Dirección: {notaCredito.Cliente.Direccion}").FontSize(7.5f);
+                                if (!string.IsNullOrWhiteSpace(notaCredito.Cliente?.CorreoElectronico))
+                                    box.Item().PaddingTop(1).Text($"Email: {notaCredito.Cliente.CorreoElectronico}").FontSize(7.5f);
+                            });
+                        });
+
+                        row.ConstantItem(10);
+
+                        // Columna Derecha: Cuadro de Totales
+                        row.RelativeItem(4.5f).Border(0.8f).BorderColor(Colors.Grey.Medium).CornerRadius(4).Padding(4).Column(totalesCol =>
+                        {
+                            void AgregarFilaTotal(string label, decimal valor, bool bold = false)
+                            {
+                                totalesCol.Item().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).PaddingVertical(2).Row(r =>
+                                {
+                                    var text = r.RelativeItem(6).Text(label).FontSize(7.5f);
+                                    if (bold) text.Bold();
+
+                                    var valText = r.RelativeItem(4).AlignRight().Text(valor.ToString("F2")).FontSize(7.5f);
+                                    if (bold) valText.Bold();
+                                });
+                            }
+
+                            AgregarFilaTotal("SUBTOTAL 15%", subtotal15);
+                            AgregarFilaTotal("SUBTOTAL 5%", subtotal5);
+                            AgregarFilaTotal("SUBTOTAL 0%", subtotal0);
+                            AgregarFilaTotal("SUBTOTAL SIN IMPUESTOS", notaCredito.TotalSinImpuestos);
+                            AgregarFilaTotal("TOTAL DESCUENTO", notaCredito.TotalDescuento);
+                            AgregarFilaTotal("IVA 15%", iva15);
+                            AgregarFilaTotal("IVA 5%", iva5);
+                            AgregarFilaTotal("VALOR TOTAL", notaCredito.ValorModificacion, bold: true);
+                        });
+                    });
+                });
+
+                page.Footer().AlignCenter().Text(x =>
+                {
+                    x.Span("Página ");
+                    x.CurrentPageNumber();
+                    x.Span(" de ");
+                    x.TotalPages();
+                });
+            });
+        });
+
+        return document.GeneratePdf();
+    }
+
     private static string GenerarCodigoBarrasSvg(string claveAcceso)
     {
         if (string.IsNullOrWhiteSpace(claveAcceso))

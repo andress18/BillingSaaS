@@ -17,6 +17,7 @@ public class Emisor : BaseAuditableEntity
     public string PuntoEmision { get; private set; } = null!;          // Ej: "001"
     public int SecuencialFactura { get; private set; }                 // Contador atómico (1, 2, 3...)
     public int SecuencialNotaDebito { get; private set; }              // Contador atómico para Notas de Débito (1, 2, 3...)
+    public int SecuencialNotaCredito { get; private set; }             // Contador atómico para Notas de Crédito (1, 2, 3...)
 
     // Configuración SRI
     public int Ambiente { get; private set; }                          // 1: Pruebas, 2: Producción
@@ -138,6 +139,19 @@ public class Emisor : BaseAuditableEntity
         if (secuencial < 0)
             throw new ArgumentException("El secuencial debe ser mayor o igual a cero.", nameof(secuencial));
         SecuencialNotaDebito = secuencial;
+    }
+
+    public string ObtenerSiguienteSecuencialNotaCredito()
+    {
+        SecuencialNotaCredito++;
+        return SecuencialNotaCredito.ToString("D9");
+    }
+
+    public void EstablecerSecuencialNotaCredito(int secuencial)
+    {
+        if (secuencial < 0)
+            throw new ArgumentException("El secuencial debe ser mayor o igual a cero.", nameof(secuencial));
+        SecuencialNotaCredito = secuencial;
     }
 
     public void ActualizarAmbiente(int nuevoAmbiente)
