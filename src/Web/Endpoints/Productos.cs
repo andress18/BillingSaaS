@@ -1,5 +1,6 @@
 using BillingSaaS.Application.Productos.Commands.ActualizarProducto;
 using BillingSaaS.Application.Productos.Commands.CrearProducto;
+using BillingSaaS.Application.Productos.Commands.DesactivarProducto;
 using BillingSaaS.Application.Productos.Queries.GetProductoById;
 using BillingSaaS.Application.Productos.Queries.SearchProductos;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -19,6 +20,7 @@ public class Productos : IEndpointGroup
         groupBuilder.MapGet(GetProductoById, "{id:guid}");
         groupBuilder.MapPost(CrearProducto);
         groupBuilder.MapPut(ActualizarProducto, "{id:guid}");
+        groupBuilder.MapDelete(DesactivarProducto, "{id:guid}");
     }
 
     [EndpointSummary("Búsqueda rápida y autocompletado de productos/servicios")]
@@ -58,6 +60,14 @@ public class Productos : IEndpointGroup
         }
 
         await sender.Send(command);
+        return TypedResults.NoContent();
+    }
+
+    [EndpointSummary("Eliminar / archivar producto (Soft Delete)")]
+    [EndpointDescription("Desactiva un producto del catálogo maestro para que no aparezca en las búsquedas ni sugerencias.")]
+    public static async Task<IResult> DesactivarProducto(ISender sender, Guid id)
+    {
+        await sender.Send(new DesactivarProductoCommand(id));
         return TypedResults.NoContent();
     }
 }

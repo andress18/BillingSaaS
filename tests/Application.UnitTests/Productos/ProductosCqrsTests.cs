@@ -1,6 +1,7 @@
 using BillingSaaS.Application.Common.Interfaces;
 using BillingSaaS.Application.Productos.Commands.ActualizarProducto;
 using BillingSaaS.Application.Productos.Commands.CrearProducto;
+using BillingSaaS.Application.Productos.Commands.DesactivarProducto;
 using BillingSaaS.Application.Productos.Queries.GetProductoById;
 using BillingSaaS.Application.Productos.Queries.SearchProductos;
 using BillingSaaS.Domain.Entities;
@@ -73,7 +74,7 @@ public class ProductosCqrsTests
     }
 
     [Test]
-    public async Task CrearProducto_ConCodigoDuplicadoEnMismoTenant_DebeLanzarExcepcion()
+    public async Task CrearProducto_ConCodigoDuplicadoActivoEnMismoTenant_DebeLanzarExcepcion()
     {
         var productoExistente = CatalogoProducto.Crear(_tenantId, "PROD-REP", "Producto Inicial", 10m);
         _context.CatalogoProductos.Add(productoExistente);
@@ -90,6 +91,37 @@ public class ProductosCqrsTests
 
         await Should.ThrowAsync<InvalidOperationException>(() =>
             handler.Handle(command, CancellationToken.None));
+    }
+
+    [Test]
+    public async Task CrearProducto_ConCodigoPreviamenteEliminado_DebeReactivarYActualizar()
+    {
+        var productoEliminado = CatalogoProducto.Crear(_tenantId, "PROD-REACT", "Descripcion Vieja", 10m);
+        productoEliminado.Desactivar();
+        _context.CatalogoProductos.Add(productoEliminado);
+        await _context.SaveChangesAsync();
+
+        var handler = new CrearProductoCommandHandler(_context, _userMock.Object);
+
+        var command = new CrearProductoCommand
+        {
+            CodigoPrincipal = "PROD-REACT",
+            Descripcion = "Servicios Nuevos",
+            PrecioUnitario = 15m,
+            CodigoImpuesto = "2",
+            CodigoPorcentaje = "4",
+            Tarifa = 15m
+        };
+
+        var id = await handler.Handle(command, CancellationToken.None);
+
+        id.ShouldBe(productoEliminado.Id);
+
+        var productoEnDb = await _context.CatalogoProductos.FindAsync([id], CancellationToken.None);
+        productoEnDb.ShouldNotBeNull();
+        productoEnDb.Activo.ShouldBeTrue();
+        productoEnDb.Descripcion.ShouldBe("Servicios Nuevos");
+        productoEnDb.PrecioUnitario.ShouldBe(15m);
     }
 
     [Test]
@@ -135,6 +167,26 @@ public class ProductosCqrsTests
         actualizado.ShouldNotBeNull();
         actualizado.Descripcion.ShouldBe("Servicio Premium");
         actualizado.PrecioUnitario.ShouldBe(95.00m);
+    }
+
+    [Test]
+    public async Task DesactivarProducto_DebeHacerSoftDeleteYExcluirloDeBusquedas()
+    {
+        var producto = CatalogoProducto.Crear(_tenantId, "PROD-DEL", "Producto a Desactivar", 25m);
+        _context.CatalogoProductos.Add(producto);
+        await _context.SaveChangesAsync();
+
+        var desactivarHandler = new DesactivarProductoCommandHandler(_context, _userMock.Object);
+        await desactivarHandler.Handle(new DesactivarProductoCommand(producto.Id), CancellationToken.None);
+
+        var productoEnDb = await _context.CatalogoProductos.FindAsync([producto.Id], CancellationToken.None);
+        productoEnDb.ShouldNotBeNull();
+        productoEnDb.Activo.ShouldBeFalse();
+
+        // Verificar que el autocompletado no lo devuelve
+        var searchHandler = new SearchProductosQueryHandler(_context, _userMock.Object);
+        var searchResults = await searchHandler.Handle(new SearchProductosQuery("PROD-DEL"), CancellationToken.None);
+        searchResults.ShouldBeEmpty();
     }
 }
 

@@ -1,7 +1,10 @@
 using BillingSaaS.Application.Clientes.Commands.ActualizarCliente;
+using BillingSaaS.Application.Clientes.Commands.DesactivarCliente;
 using BillingSaaS.Application.Clientes.Commands.UpsertCliente;
+using BillingSaaS.Application.Clientes.Queries.ConsultarSri;
 using BillingSaaS.Application.Clientes.Queries.GetClienteById;
 using BillingSaaS.Application.Clientes.Queries.SearchClientes;
+using BillingSaaS.Application.Common.Interfaces;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,8 +20,10 @@ public class Clientes : IEndpointGroup
 
         groupBuilder.MapGet(SearchClientes, "search");
         groupBuilder.MapGet(GetClienteById, "{id:guid}");
+        groupBuilder.MapGet(ConsultarSri, "consultar-sri/{identificacion}");
         groupBuilder.MapPost(UpsertCliente);
         groupBuilder.MapPut(ActualizarCliente, "{id:guid}");
+        groupBuilder.MapDelete(DesactivarCliente, "{id:guid}");
     }
 
     [EndpointSummary("Búsqueda rápida y autocompletado de clientes")]
@@ -59,6 +64,22 @@ public class Clientes : IEndpointGroup
 
         await sender.Send(command);
         return TypedResults.NoContent();
+    }
+
+    [EndpointSummary("Eliminar / archivar cliente (Soft Delete)")]
+    [EndpointDescription("Desactiva un cliente del catálogo maestro para que no aparezca en las búsquedas ni sugerencias.")]
+    public static async Task<IResult> DesactivarCliente(ISender sender, Guid id)
+    {
+        await sender.Send(new DesactivarClienteCommand(id));
+        return TypedResults.NoContent();
+    }
+
+    [EndpointSummary("Consultar datos fiscales al SRI")]
+    [EndpointDescription("Consulta pública al SRI oficial por RUC o Cédula para autocompletar Razón Social y datos tributarios.")]
+    public static async Task<Results<Ok<SriContribuyenteDto>, NotFound>> ConsultarSri(ISender sender, string identificacion)
+    {
+        var result = await sender.Send(new ConsultarSriQuery(identificacion));
+        return result != null ? TypedResults.Ok(result) : TypedResults.NotFound();
     }
 }
 

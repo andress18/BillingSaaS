@@ -34,12 +34,28 @@ public class CrearProductoCommandHandler : IRequestHandler<CrearProductoCommand,
 
         var codigoPrincipal = request.CodigoPrincipal.Trim();
 
-        var existe = await _context.CatalogoProductos
-            .AnyAsync(p => p.TenantId == tenantId && p.CodigoPrincipal == codigoPrincipal, cancellationToken);
+        var productoExistente = await _context.CatalogoProductos
+            .FirstOrDefaultAsync(p => p.TenantId == tenantId && p.CodigoPrincipal == codigoPrincipal, cancellationToken);
 
-        if (existe)
+        if (productoExistente != null)
         {
-            throw new InvalidOperationException($"Ya existe un producto con el código '{codigoPrincipal}' en este tenant.");
+            if (productoExistente.Activo)
+            {
+                throw new InvalidOperationException($"Ya existe un producto activo con el código '{codigoPrincipal}' en este tenant.");
+            }
+
+            // Si fue eliminado previamente (soft-delete), se reactiva con los nuevos datos
+            productoExistente.ActualizarDatos(
+                request.Descripcion,
+                request.PrecioUnitario,
+                request.CodigoImpuesto,
+                request.CodigoPorcentaje,
+                request.Tarifa);
+
+            productoExistente.Activar();
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return productoExistente.Id;
         }
 
         var producto = CatalogoProducto.Crear(
