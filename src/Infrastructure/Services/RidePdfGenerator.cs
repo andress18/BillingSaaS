@@ -6,6 +6,8 @@ using Barcoder.Code128;
 using Barcoder.Renderer.Svg;
 using BillingSaaS.Application.Common.Interfaces;
 using BillingSaaS.Domain.Entities;
+using BillingSaaS.Infrastructure.Common;
+using BillingSaaS.Shared.Pdf;
 using Microsoft.Extensions.Configuration;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -41,6 +43,12 @@ public class RidePdfGenerator : IRidePdfGenerator
     }
 
     public byte[] GenerarFacturaRide(Factura factura, Emisor? emisor, string? logoBase64 = null)
+    {
+        ArgumentNullException.ThrowIfNull(factura);
+        return GenerarFacturaRide(factura.ToPdfRequest(emisor, logoBase64, _rucProveedor, _nombreProveedor));
+    }
+
+    public byte[] GenerarFacturaRide(FacturaPdfRequestDto factura)
     {
         ArgumentNullException.ThrowIfNull(factura);
 
@@ -91,7 +99,7 @@ public class RidePdfGenerator : IRidePdfGenerator
         string? barcodeSvg = GenerarCodigoBarrasSvg(claveAcceso);
 
         // 3. Procesamiento de logo opcional
-        logoBase64 ??= emisor?.Logo;
+        var logoBase64 = factura.LogoBase64;
         byte[]? logoBytes = null;
         if (!string.IsNullOrWhiteSpace(logoBase64))
         {
@@ -107,14 +115,14 @@ public class RidePdfGenerator : IRidePdfGenerator
         }
 
         // 4. Datos del emisor
-        string razonSocialEmisor = emisor?.RazonSocial ?? factura.RazonSocial ?? "EMISOR ELECTRÓNICO";
-        string? nombreComercialEmisor = emisor?.NombreComercial;
-        string rucEmisor = emisor?.Ruc ?? factura.Ruc ?? "9999999999999";
-        string direccionMatriz = emisor?.DireccionMatriz ?? factura.DireccionMatriz ?? "S/N";
-        string direccionEstablecimiento = emisor?.DireccionEstablecimiento ?? direccionMatriz;
-        bool obligadoContabilidad = emisor?.ObligadoContabilidad ?? false;
-        string? contribuyenteEspecial = emisor?.ContribuyenteEspecial;
-        string? regimenRimpe = emisor?.RegimenRimpe ?? factura.ContribuyenteRimpe;
+        string razonSocialEmisor = factura.Emisor?.RazonSocial ?? factura.RazonSocialEmisor ?? "EMISOR ELECTRÓNICO";
+        string? nombreComercialEmisor = factura.Emisor?.NombreComercial;
+        string rucEmisor = factura.Emisor?.Ruc ?? factura.RucEmisor ?? "9999999999999";
+        string direccionMatriz = factura.Emisor?.DireccionMatriz ?? factura.DireccionMatrizEmisor ?? "S/N";
+        string direccionEstablecimiento = factura.Emisor?.DireccionEstablecimiento ?? direccionMatriz;
+        bool obligadoContabilidad = factura.Emisor?.ObligadoContabilidad == "SI";
+        string? contribuyenteEspecial = factura.Emisor?.ContribuyenteEspecial;
+        string? regimenRimpe = factura.Emisor?.RegimenRimpe ?? factura.RegimenRimpeEmisor;
 
         // 5. Creación del Documento QuestPDF
         var document = Document.Create(container =>
@@ -233,8 +241,8 @@ public class RidePdfGenerator : IRidePdfGenerator
                     col.Item().PaddingTop(6).Border(0.8f).BorderColor(Colors.Grey.Medium).CornerRadius(4).Padding(6).Column(compradorCol =>
                     {
                         var cliente = factura.Cliente;
-                        string razonSocialComp = cliente?.RazonSocial ?? factura.RazonSocialComprador ?? "CONSUMIDOR FINAL";
-                        string identificacionComp = cliente?.Identificacion ?? factura.IdentificacionComprador ?? "9999999999999";
+                        string razonSocialComp = cliente?.RazonSocial ?? "CONSUMIDOR FINAL";
+                        string identificacionComp = cliente?.Identificacion ?? "9999999999999";
                         string direccionComp = cliente?.Direccion ?? "S/N";
 
                         compradorCol.Item().Row(r =>
@@ -452,6 +460,12 @@ public class RidePdfGenerator : IRidePdfGenerator
     public byte[] GenerarNotaDebitoRide(NotaDebito notaDebito, Emisor? emisor, string? logoBase64 = null)
     {
         ArgumentNullException.ThrowIfNull(notaDebito);
+        return GenerarNotaDebitoRide(notaDebito.ToPdfRequest(emisor, logoBase64, _rucProveedor, _nombreProveedor));
+    }
+
+    public byte[] GenerarNotaDebitoRide(NotaDebitoPdfRequestDto notaDebito)
+    {
+        ArgumentNullException.ThrowIfNull(notaDebito);
 
         var todosImpuestos = notaDebito.Impuestos.ToList();
 
@@ -488,7 +502,7 @@ public class RidePdfGenerator : IRidePdfGenerator
         string claveAcceso = notaDebito.ClaveAcceso ?? string.Empty;
         string? barcodeSvg = GenerarCodigoBarrasSvg(claveAcceso);
 
-        logoBase64 ??= emisor?.Logo;
+        var logoBase64 = notaDebito.LogoBase64;
         byte[]? logoBytes = null;
         if (!string.IsNullOrWhiteSpace(logoBase64))
         {
@@ -503,14 +517,14 @@ public class RidePdfGenerator : IRidePdfGenerator
             }
         }
 
-        string razonSocialEmisor = emisor?.RazonSocial ?? notaDebito.RazonSocial ?? "EMISOR ELECTRÓNICO";
-        string? nombreComercialEmisor = emisor?.NombreComercial;
-        string rucEmisor = emisor?.Ruc ?? notaDebito.Ruc ?? "9999999999999";
-        string direccionMatriz = emisor?.DireccionMatriz ?? notaDebito.DireccionMatriz ?? "S/N";
-        string direccionEstablecimiento = emisor?.DireccionEstablecimiento ?? direccionMatriz;
-        bool obligadoContabilidad = emisor?.ObligadoContabilidad ?? false;
-        string? contribuyenteEspecial = emisor?.ContribuyenteEspecial;
-        string? regimenRimpe = emisor?.RegimenRimpe ?? notaDebito.ContribuyenteRimpe;
+        string razonSocialEmisor = notaDebito.Emisor?.RazonSocial ?? "EMISOR ELECTRÓNICO";
+        string? nombreComercialEmisor = notaDebito.Emisor?.NombreComercial;
+        string rucEmisor = notaDebito.Emisor?.Ruc ?? "9999999999999";
+        string direccionMatriz = notaDebito.Emisor?.DireccionMatriz ?? "S/N";
+        string direccionEstablecimiento = notaDebito.Emisor?.DireccionEstablecimiento ?? direccionMatriz;
+        bool obligadoContabilidad = notaDebito.Emisor?.ObligadoContabilidad == "SI";
+        string? contribuyenteEspecial = notaDebito.Emisor?.ContribuyenteEspecial;
+        string? regimenRimpe = notaDebito.Emisor?.RegimenRimpe;
 
         var document = Document.Create(container =>
         {
@@ -624,8 +638,8 @@ public class RidePdfGenerator : IRidePdfGenerator
                     col.Item().PaddingTop(6).Border(0.8f).BorderColor(Colors.Grey.Medium).CornerRadius(4).Padding(6).Column(compradorCol =>
                     {
                         var cliente = notaDebito.Cliente;
-                        string razonSocialComp = cliente?.RazonSocial ?? notaDebito.RazonSocialComprador ?? "CONSUMIDOR FINAL";
-                        string identificacionComp = cliente?.Identificacion ?? notaDebito.IdentificacionComprador ?? "9999999999999";
+                        string razonSocialComp = cliente?.RazonSocial ?? "CONSUMIDOR FINAL";
+                        string identificacionComp = cliente?.Identificacion ?? "9999999999999";
 
                         compradorCol.Item().Row(r =>
                         {
@@ -803,6 +817,12 @@ public class RidePdfGenerator : IRidePdfGenerator
     public byte[] GenerarNotaCreditoRide(NotaCredito notaCredito, Emisor? emisor, string? logoBase64 = null)
     {
         ArgumentNullException.ThrowIfNull(notaCredito);
+        return GenerarNotaCreditoRide(notaCredito.ToPdfRequest(emisor, logoBase64, _rucProveedor, _nombreProveedor));
+    }
+
+    public byte[] GenerarNotaCreditoRide(NotaCreditoPdfRequestDto notaCredito)
+    {
+        ArgumentNullException.ThrowIfNull(notaCredito);
 
         // 1. Cálculos de subtotales agrupados por tarifa de IVA según especificaciones SRI
         var todosImpuestos = notaCredito.Detalles.SelectMany(d => d.Impuestos).ToList();
@@ -842,7 +862,7 @@ public class RidePdfGenerator : IRidePdfGenerator
         string? barcodeSvg = GenerarCodigoBarrasSvg(claveAcceso);
 
         // 3. Procesamiento de logo opcional
-        logoBase64 ??= emisor?.Logo;
+        var logoBase64 = notaCredito.LogoBase64;
         byte[]? logoBytes = null;
         if (!string.IsNullOrWhiteSpace(logoBase64))
         {
@@ -858,14 +878,14 @@ public class RidePdfGenerator : IRidePdfGenerator
         }
 
         // 4. Datos del emisor
-        string razonSocialEmisor = emisor?.RazonSocial ?? notaCredito.RazonSocial ?? "EMISOR ELECTRÓNICO";
-        string? nombreComercialEmisor = emisor?.NombreComercial;
-        string rucEmisor = emisor?.Ruc ?? notaCredito.Ruc ?? "9999999999999";
-        string direccionMatriz = emisor?.DireccionMatriz ?? notaCredito.DireccionMatriz ?? "S/N";
-        string direccionEstablecimiento = emisor?.DireccionEstablecimiento ?? direccionMatriz;
-        bool obligadoContabilidad = emisor?.ObligadoContabilidad ?? false;
-        string? contribuyenteEspecial = emisor?.ContribuyenteEspecial;
-        string? regimenRimpe = emisor?.RegimenRimpe ?? notaCredito.ContribuyenteRimpe;
+        string razonSocialEmisor = notaCredito.Emisor?.RazonSocial ?? "EMISOR ELECTRÓNICO";
+        string? nombreComercialEmisor = notaCredito.Emisor?.NombreComercial;
+        string rucEmisor = notaCredito.Emisor?.Ruc ?? "9999999999999";
+        string direccionMatriz = notaCredito.Emisor?.DireccionMatriz ?? "S/N";
+        string direccionEstablecimiento = notaCredito.Emisor?.DireccionEstablecimiento ?? direccionMatriz;
+        bool obligadoContabilidad = notaCredito.Emisor?.ObligadoContabilidad == "SI";
+        string? contribuyenteEspecial = notaCredito.Emisor?.ContribuyenteEspecial;
+        string? regimenRimpe = notaCredito.Emisor?.RegimenRimpe;
 
         var document = Document.Create(container =>
         {
@@ -941,8 +961,8 @@ public class RidePdfGenerator : IRidePdfGenerator
                     {
                         infoBox.Item().Row(r =>
                         {
-                            r.RelativeItem(7).Text($"Razón Social / Nombres y Apellidos: {notaCredito.RazonSocialComprador}").Bold().FontSize(8.5f);
-                            r.RelativeItem(3).Text($"Identificación: {notaCredito.IdentificacionComprador}").Bold().FontSize(8.5f);
+                            r.RelativeItem(7).Text($"Razón Social / Nombres y Apellidos: {notaCredito.Cliente?.RazonSocial ?? "CONSUMIDOR FINAL"}").Bold().FontSize(8.5f);
+                            r.RelativeItem(3).Text($"Identificación: {notaCredito.Cliente?.Identificacion ?? "9999999999999"}").Bold().FontSize(8.5f);
                         });
 
                         infoBox.Item().PaddingTop(2).Row(r =>
