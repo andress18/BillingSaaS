@@ -21,10 +21,12 @@ public class NotaDebitoXmlGenerator : INotaDebitoXmlGenerator
     };
 
     private readonly string _rucProveedor;
+    private readonly string _nombreProveedor;
 
-    public NotaDebitoXmlGenerator(string rucProveedor = "1790000000001")
+    public NotaDebitoXmlGenerator(string rucProveedor, string nombreProveedor)
     {
-        _rucProveedor = string.IsNullOrWhiteSpace(rucProveedor) ? "1790000000001" : rucProveedor;
+        _rucProveedor = rucProveedor;
+        _nombreProveedor = nombreProveedor;
     }
 
     public XDocument GenerarXml(NotaDebito notaDebito)
@@ -120,7 +122,7 @@ public class NotaDebitoXmlGenerator : INotaDebitoXmlGenerator
                         : null,
                     new XElement("campoAdicional",
                         new XAttribute("nombre", "Software"),
-                        "Factura Fácil Ecuador"),
+                        _nombreProveedor),
                     new XElement("campoAdicional",
                         new XAttribute("nombre", "RUC Proveedor Software"),
                         _rucProveedor)
