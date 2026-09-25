@@ -32,7 +32,8 @@ public class EmisorBriefDto
         {
             CreateMap<Emisor, EmisorBriefDto>()
                 .ForMember(d => d.TieneCertificadoDigital, opt => opt.MapFrom(s => s.CertificadoDigital != null && s.CertificadoDigital.Length > 0))
-                .ForMember(d => d.ProximoSecuencialFactura, opt => opt.MapFrom(s => s.SecuencialFactura + 1));
+                .ForMember(d => d.SecuencialFactura, opt => opt.MapFrom(s => s.SecuencialFactura <= 0 ? 1 : s.SecuencialFactura))
+                .ForMember(d => d.ProximoSecuencialFactura, opt => opt.MapFrom(s => s.SecuencialFactura <= 0 ? 1 : s.SecuencialFactura));
         }
     }
 }

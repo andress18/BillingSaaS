@@ -245,7 +245,9 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
             Secuencial = $"{emisor.CodigoEstablecimiento}-{emisor.PuntoEmision}-{secuencial}",
             Estado = factura.Estado,
             EsRecibida = esRecibida,
-            MensajeDevolucion = mensajeDevolucion
+            MensajeDevolucion = mensajeDevolucion,
+            ProximoSecuencial = emisor.SecuencialFactura,
+            ProximoSecuencialNumero = emisor.SecuencialFactura.ToString("D9")
         };
     }
 }

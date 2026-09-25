@@ -8,5 +8,7 @@ public class EmitirFacturaResponseDto
     public string Estado { get; set; } = string.Empty; // RECIBIDA, DEVUELTA, etc.
     public bool EsRecibida { get; set; }
     public string? MensajeDevolucion { get; set; }
+    public int ProximoSecuencial { get; set; }
+    public string ProximoSecuencialNumero { get; set; } = string.Empty;
 }
 

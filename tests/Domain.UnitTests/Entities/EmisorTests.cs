@@ -31,7 +31,7 @@ public class EmisorTests
         emisor.Ambiente.ShouldBe(1);
         emisor.ObligadoContabilidad.ShouldBeTrue();
         emisor.Activo.ShouldBeTrue();
-        emisor.SecuencialFactura.ShouldBe(0);
+        emisor.SecuencialFactura.ShouldBe(1);
     }
 
     [Test]
@@ -45,12 +45,14 @@ public class EmisorTests
             secuencialInicial: 42
         );
 
+        emisor.SecuencialFactura.ShouldBe(42);
+
         var sec1 = emisor.ObtenerSiguienteSecuencialFactura();
         var sec2 = emisor.ObtenerSiguienteSecuencialFactura();
 
         sec1.ShouldBe("000000042");
         sec2.ShouldBe("000000043");
-        emisor.SecuencialFactura.ShouldBe(43);
+        emisor.SecuencialFactura.ShouldBe(44);
     }
 
     [Test]
@@ -64,9 +66,11 @@ public class EmisorTests
             secuencialInicial: 1
         );
 
+        emisor.SecuencialFactura.ShouldBe(1);
+
         var sec1 = emisor.ObtenerSiguienteSecuencialFactura();
         sec1.ShouldBe("000000001");
-        emisor.SecuencialFactura.ShouldBe(1);
+        emisor.SecuencialFactura.ShouldBe(2);
     }
 
     [Test]
@@ -80,9 +84,11 @@ public class EmisorTests
             secuencialInicial: 0
         );
 
+        emisor.SecuencialFactura.ShouldBe(1);
+
         var sec1 = emisor.ObtenerSiguienteSecuencialFactura();
         sec1.ShouldBe("000000001");
-        emisor.SecuencialFactura.ShouldBe(1);
+        emisor.SecuencialFactura.ShouldBe(2);
     }
 
     [Test]
@@ -96,12 +102,35 @@ public class EmisorTests
         );
         emisor.EstablecerSecuencialNotaDebito(10);
 
+        emisor.SecuencialNotaDebito.ShouldBe(10);
+
         var sec1 = emisor.ObtenerSiguienteSecuencialNotaDebito();
         var sec2 = emisor.ObtenerSiguienteSecuencialNotaDebito();
 
         sec1.ShouldBe("000000010");
         sec2.ShouldBe("000000011");
-        emisor.SecuencialNotaDebito.ShouldBe(11);
+        emisor.SecuencialNotaDebito.ShouldBe(12);
+    }
+
+    [Test]
+    public void ObtenerSiguienteSecuencialNotaCredito_DebeIniciarEnSecuencialConfiguradoEIncrementar()
+    {
+        var emisor = Emisor.Crear(
+            tenantId: Guid.NewGuid(),
+            ruc: "0957790108001",
+            razonSocial: "FARMACIA SAN JOSE CIA LTDA",
+            direccionMatriz: "Av. Amazonas"
+        );
+        emisor.EstablecerSecuencialNotaCredito(5);
+
+        emisor.SecuencialNotaCredito.ShouldBe(5);
+
+        var sec1 = emisor.ObtenerSiguienteSecuencialNotaCredito();
+        var sec2 = emisor.ObtenerSiguienteSecuencialNotaCredito();
+
+        sec1.ShouldBe("000000005");
+        sec2.ShouldBe("000000006");
+        emisor.SecuencialNotaCredito.ShouldBe(7);
     }
 
     [Test]
@@ -143,7 +172,7 @@ public class EmisorTests
 
         var siguienteSecuencial = emisor.ObtenerSiguienteSecuencialFactura();
         siguienteSecuencial.ShouldBe("000000100");
-        emisor.SecuencialFactura.ShouldBe(100);
+        emisor.SecuencialFactura.ShouldBe(101);
     }
 
     [Test]
