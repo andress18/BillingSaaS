@@ -6,6 +6,7 @@ using Barcoder.Code128;
 using Barcoder.Renderer.Svg;
 using BillingSaaS.Application.Common.Interfaces;
 using BillingSaaS.Domain.Entities;
+using Microsoft.Extensions.Configuration;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -14,9 +15,24 @@ namespace BillingSaaS.Infrastructure.Services;
 
 public class RidePdfGenerator : IRidePdfGenerator
 {
+    private readonly string _rucProveedor;
+    private readonly string _nombreProveedor;
+
     static RidePdfGenerator()
     {
         QuestPDF.Settings.License = LicenseType.Community;
+    }
+
+    public RidePdfGenerator(string rucProveedor = "0957790108001", string nombreProveedor = "Factura Fácil")
+    {
+        _rucProveedor = string.IsNullOrWhiteSpace(rucProveedor) ? "0957790108001" : rucProveedor;
+        _nombreProveedor = string.IsNullOrWhiteSpace(nombreProveedor) ? "Factura Fácil" : nombreProveedor;
+    }
+
+    public RidePdfGenerator(IConfiguration configuration)
+        : this(configuration?["ProveedorFacturacion:Ruc"] ?? "0957790108001",
+               configuration?["ProveedorFacturacion:Nombre"] ?? "Factura Fácil")
+    {
     }
 
     public byte[] GenerarFacturaRide(Factura factura, string? logoBase64 = null)
@@ -356,7 +372,7 @@ public class RidePdfGenerator : IRidePdfGenerator
                                 }
 
                                 // Leyenda técnica de software / Anexo 26 SRI
-                                adicionalBox.Item().PaddingTop(3).Text("Software: Factura Fácil (RUC Proveedor: 0957790108001 - Anexo 26)").FontSize(7f).FontColor(Colors.Grey.Darken2);
+                                adicionalBox.Item().PaddingTop(3).Text($"Software: {_nombreProveedor} (RUC Proveedor: {_rucProveedor} - Anexo 26)").FontSize(7f).FontColor(Colors.Grey.Darken2);
                             });
 
                             // Cuadro de Formas de Pago
@@ -712,6 +728,9 @@ public class RidePdfGenerator : IRidePdfGenerator
                                         t.Span(notaDebito.Cliente.Direccion);
                                     });
                                 }
+
+                                // Leyenda técnica de software / Anexo 26 SRI
+                                infoAdicional.Item().PaddingTop(3).Text($"Software: {_nombreProveedor} (RUC Proveedor: {_rucProveedor} - Anexo 26)").FontSize(7f).FontColor(Colors.Grey.Darken2);
                             });
 
                             if (notaDebito.Pagos.Any())
@@ -1006,6 +1025,9 @@ public class RidePdfGenerator : IRidePdfGenerator
                                     box.Item().PaddingTop(2).Text($"Dirección: {notaCredito.Cliente.Direccion}").FontSize(7.5f);
                                 if (!string.IsNullOrWhiteSpace(notaCredito.Cliente?.CorreoElectronico))
                                     box.Item().PaddingTop(1).Text($"Email: {notaCredito.Cliente.CorreoElectronico}").FontSize(7.5f);
+
+                                // Leyenda técnica de software / Anexo 26 SRI
+                                box.Item().PaddingTop(3).Text($"Software: {_nombreProveedor} (RUC Proveedor: {_rucProveedor} - Anexo 26)").FontSize(7f).FontColor(Colors.Grey.Darken2);
                             });
                         });
 

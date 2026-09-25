@@ -83,15 +83,19 @@ public static class DependencyInjection
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddTransient<IIdentityService, IdentityService>();
 
+        // Proveedor de Facturación (Software y RUC Anexo 26 SRI)
+        var rucProveedor = builder.Configuration["ProveedorFacturacion:Ruc"] ?? "0957790108001";
+        var nombreProveedor = builder.Configuration["ProveedorFacturacion:Nombre"] ?? "Factura Fácil";
+
         // Servicios de Facturación y Firma SRI
-        builder.Services.AddTransient<IFacturaXmlGenerator, FacturaXmlGenerator>();
-        builder.Services.AddTransient<INotaDebitoXmlGenerator, NotaDebitoXmlGenerator>();
-        builder.Services.AddTransient<INotaCreditoXmlGenerator, NotaCreditoXmlGenerator>();
+        builder.Services.AddTransient<IFacturaXmlGenerator>(_ => new FacturaXmlGenerator(rucProveedor));
+        builder.Services.AddTransient<INotaDebitoXmlGenerator>(_ => new NotaDebitoXmlGenerator(rucProveedor, nombreProveedor));
+        builder.Services.AddTransient<INotaCreditoXmlGenerator>(_ => new NotaCreditoXmlGenerator(rucProveedor, nombreProveedor));
         builder.Services.AddTransient<ISriSignatureService, SriSignatureService>();
 
         // Generador de Representación Impresa (RIDE) en PDF (QuestPDF)
         QuestPDF.Settings.License = LicenseType.Community;
-        builder.Services.AddTransient<IRidePdfGenerator, RidePdfGenerator>();
+        builder.Services.AddTransient<IRidePdfGenerator>(_ => new RidePdfGenerator(rucProveedor, nombreProveedor));
 
         // Servicio de Control de Planes y Suscripciones SaaS
         builder.Services.AddScoped<ISubscriptionValidationService, SubscriptionValidationService>();

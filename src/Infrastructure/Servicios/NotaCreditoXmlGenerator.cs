@@ -19,10 +19,12 @@ public class NotaCreditoXmlGenerator : INotaCreditoXmlGenerator
     };
 
     private readonly string _rucProveedor;
+    private readonly string _nombreProveedor;
 
-    public NotaCreditoXmlGenerator(string rucProveedor = "0957790108001")
+    public NotaCreditoXmlGenerator(string rucProveedor, string nombreProveedor)
     {
-        _rucProveedor = string.IsNullOrWhiteSpace(rucProveedor) ? "0957790108001" : rucProveedor;
+        _rucProveedor = rucProveedor;
+        _nombreProveedor = nombreProveedor;
     }
 
     public XDocument GenerarXml(NotaCredito notaCredito)
@@ -135,7 +137,7 @@ public class NotaCreditoXmlGenerator : INotaCreditoXmlGenerator
                         : null,
                     new XElement("campoAdicional",
                         new XAttribute("nombre", "Software"),
-                        "Factura Fácil Ecuador"),
+                        _nombreProveedor),
                     new XElement("campoAdicional",
                         new XAttribute("nombre", "RUC Proveedor Software"),
                         _rucProveedor)

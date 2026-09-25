@@ -21,9 +21,9 @@ public class FacturaXmlGenerator : IFacturaXmlGenerator
     // Tu RUC como proveedor de software (Requisito Anexo 26)
     private readonly string _rucProveedor;
 
-    public FacturaXmlGenerator(string rucProveedor = "1790000000001")
+    public FacturaXmlGenerator(string rucProveedor)
     {
-        _rucProveedor = string.IsNullOrWhiteSpace(rucProveedor) ? "1790000000001" : rucProveedor;
+        _rucProveedor = rucProveedor;
     }
 
     public XDocument GenerarXml(Factura factura)
