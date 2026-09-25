@@ -22,15 +22,13 @@ public class ConfigurarEmisorCommandValidator : AbstractValidator<ConfigurarEmis
 
         RuleFor(x => x.CodigoEstablecimiento)
             .NotEmpty()
-            .Length(3)
-            .Matches("^[0-9]+$")
-            .WithMessage("El código de establecimiento debe tener 3 dígitos numéricos.");
+            .Equal("001")
+            .WithMessage("El plan solo permite el establecimiento principal '001'.");
 
         RuleFor(x => x.PuntoEmision)
             .NotEmpty()
-            .Length(3)
-            .Matches("^[0-9]+$")
-            .WithMessage("El punto de emisión debe tener 3 dígitos numéricos.");
+            .Equal("001")
+            .WithMessage("El plan solo permite el punto de emisión '001'.");
 
         RuleFor(x => x.Ambiente)
             .Must(a => a is 1 or 2)

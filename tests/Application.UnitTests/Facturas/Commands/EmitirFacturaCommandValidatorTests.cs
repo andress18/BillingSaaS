@@ -114,4 +114,55 @@ public class EmitirFacturaCommandValidatorTests
 
         result.IsValid.ShouldBeTrue();
     }
+
+    [Test]
+    public void Validar_ConsumidorFinalConMontoMayorACincuenta_DebeFallar()
+    {
+        var command = new EmitirFacturaCommand
+        {
+            EmisorId = 1,
+            Cliente = new EmitirFacturaCommand.CompradorDto("07", "9999999999999", "CONSUMIDOR FINAL", null, null),
+            Detalles =
+            [
+                new EmitirFacturaCommand.DetalleDto(
+                    "PROD-01",
+                    "Producto Costoso",
+                    Cantidad: 1,
+                    PrecioUnitario: 50.01m,
+                    Descuento: 0,
+                    Impuestos: [new EmitirFacturaCommand.ImpuestoDto("2", "0", 0m, 50.01m)]
+                )
+            ]
+        };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.ErrorMessage.Contains("Consumidor Final no pueden superar los $50.00 USD"));
+    }
+
+    [Test]
+    public void Validar_ConsumidorFinalConMontoExactamenteCincuenta_DebeSerValido()
+    {
+        var command = new EmitirFacturaCommand
+        {
+            EmisorId = 1,
+            Cliente = new EmitirFacturaCommand.CompradorDto("07", "9999999999999", "CONSUMIDOR FINAL", null, null),
+            Detalles =
+            [
+                new EmitirFacturaCommand.DetalleDto(
+                    "PROD-01",
+                    "Producto Limite",
+                    Cantidad: 1,
+                    PrecioUnitario: 50.00m,
+                    Descuento: 0,
+                    Impuestos: [new EmitirFacturaCommand.ImpuestoDto("2", "0", 0m, 50.00m)]
+                )
+            ]
+        };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.ShouldBeTrue();
+    }
 }

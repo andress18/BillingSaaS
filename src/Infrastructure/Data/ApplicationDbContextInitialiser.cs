@@ -402,9 +402,9 @@ public class ApplicationDbContextInitialiser
                 precioMensual: 3.00m,
                 precioAnual: 20.00m,
                 maxDocumentosMensuales: null,
-                maxDocumentosAnuales: null,
+                maxDocumentosAnuales: 100,
                 maxEstablecimientos: 1,
-                tiposDocumentosPermitidos: "01,04",
+                tiposDocumentosPermitidos: "01,04,05",
                 esPublico: true
             );
             _context.Planes.Add(planMigracionSistema);
@@ -412,6 +412,7 @@ public class ApplicationDbContextInitialiser
         else
         {
             planMigracionSistema.ActualizarPrecios(3.00m, 20.00m);
+            planMigracionSistema.ActualizarLimites(null, 100, 1, "01,04,05");
         }
 
         var planMigracionFirma = await _context.Planes.FirstOrDefaultAsync(p => p.Codigo == "MIGRACION_FIRMA");
@@ -424,9 +425,9 @@ public class ApplicationDbContextInitialiser
                 precioMensual: 5.00m,
                 precioAnual: 45.00m,
                 maxDocumentosMensuales: null,
-                maxDocumentosAnuales: null,
+                maxDocumentosAnuales: 100,
                 maxEstablecimientos: 1,
-                tiposDocumentosPermitidos: "01,04",
+                tiposDocumentosPermitidos: "01,04,05",
                 esPublico: true
             );
             _context.Planes.Add(planMigracionFirma);
@@ -434,6 +435,7 @@ public class ApplicationDbContextInitialiser
         else
         {
             planMigracionFirma.ActualizarPrecios(5.00m, 45.00m);
+            planMigracionFirma.ActualizarLimites(null, 100, 1, "01,04,05");
         }
 
         var planCortesiaPartner = await _context.Planes.FirstOrDefaultAsync(p => p.Codigo == "PLAN_CORTESIA_PARTNER");

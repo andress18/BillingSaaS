@@ -55,14 +55,23 @@ public class SubscriptionValidationService : ISubscriptionValidationService
             throw new EstablishmentLimitExceededException(suscripcion.Plan.MaxEstablecimientos, numEstablecimiento);
         }
 
-        // 4. Validar cuota de documentos en el periodo actual
+        // 4. Validar cuota de documentos en el periodo actual (límite por tipo de comprobante)
         if (!suscripcion.Plan.EsIlimitado(suscripcion.Frecuencia))
         {
             var limite = suscripcion.Plan.ObtenerLimiteDocumentos(suscripcion.Frecuencia)!.Value;
             var inicioCiclo = suscripcion.ObtenerInicioCicloActual(ahoraUtc);
 
-            var emitidos = await _context.Facturas
-                .CountAsync(f => f.TenantId == tenantId && f.FechaEmision >= inicioCiclo && f.Estado != "DEVUELTA", cancellationToken);
+            int emitidos = codDoc switch
+            {
+                "01" => await _context.Facturas
+                    .CountAsync(f => f.TenantId == tenantId && f.FechaEmision >= inicioCiclo && f.Estado != "DEVUELTA", cancellationToken),
+                "04" => await _context.NotasCredito
+                    .CountAsync(nc => nc.TenantId == tenantId && nc.FechaEmision >= inicioCiclo && nc.Estado != "DEVUELTA", cancellationToken),
+                "05" => await _context.NotasDebito
+                    .CountAsync(nd => nd.TenantId == tenantId && nd.FechaEmision >= inicioCiclo && nd.Estado != "DEVUELTA", cancellationToken),
+                _ => await _context.Facturas
+                    .CountAsync(f => f.TenantId == tenantId && f.FechaEmision >= inicioCiclo && f.Estado != "DEVUELTA", cancellationToken)
+            };
 
             if (emitidos >= limite)
             {

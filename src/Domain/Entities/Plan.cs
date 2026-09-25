@@ -95,5 +95,13 @@ public class Plan : BaseAuditableEntity
         PrecioMensual = Math.Max(0m, precioMensual);
         PrecioAnual = Math.Max(0m, precioAnual);
     }
+
+    public void ActualizarLimites(int? maxMensuales, int? maxAnuales, int maxEstablecimientos, string tiposDocumentosPermitidos)
+    {
+        MaxDocumentosMensuales = maxMensuales;
+        MaxDocumentosAnuales = maxAnuales;
+        MaxEstablecimientos = Math.Max(1, maxEstablecimientos);
+        TiposDocumentosPermitidos = string.IsNullOrWhiteSpace(tiposDocumentosPermitidos) ? "01" : tiposDocumentosPermitidos.Trim();
+    }
 }
 

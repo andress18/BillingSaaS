@@ -44,6 +44,13 @@ public class CrearProductoCommandHandler : IRequestHandler<CrearProductoCommand,
                 throw new InvalidOperationException($"Ya existe un producto activo con el código '{codigoPrincipal}' en este tenant.");
             }
 
+            var totalActivos = await _context.CatalogoProductos
+                .CountAsync(p => p.TenantId == tenantId && p.Activo, cancellationToken);
+            if (totalActivos >= 25)
+            {
+                throw new InvalidOperationException("Ha alcanzado el límite máximo permitido de 25 productos o servicios registrados en su catálogo.");
+            }
+
             // Si fue eliminado previamente (soft-delete), se reactiva con los nuevos datos
             productoExistente.ActualizarDatos(
                 request.Descripcion,
@@ -56,6 +63,13 @@ public class CrearProductoCommandHandler : IRequestHandler<CrearProductoCommand,
             await _context.SaveChangesAsync(cancellationToken);
 
             return productoExistente.Id;
+        }
+
+        var totalProductos = await _context.CatalogoProductos
+            .CountAsync(p => p.TenantId == tenantId && p.Activo, cancellationToken);
+        if (totalProductos >= 25)
+        {
+            throw new InvalidOperationException("Ha alcanzado el límite máximo permitido de 25 productos o servicios registrados en su catálogo.");
         }
 
         var producto = CatalogoProducto.Crear(

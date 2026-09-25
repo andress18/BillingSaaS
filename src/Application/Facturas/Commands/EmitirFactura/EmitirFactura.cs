@@ -116,6 +116,13 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
             }
             else
             {
+                var totalClientes = await _context.CatalogoClientes
+                    .CountAsync(c => c.TenantId == emisor.TenantId && c.Activo, cancellationToken);
+                if (totalClientes >= 10)
+                {
+                    throw new InvalidOperationException("Ha alcanzado el límite máximo permitido de 10 compradores registrados en su catálogo.");
+                }
+
                 clienteCatalogo = CatalogoCliente.Crear(
                     tenantId: emisor.TenantId,
                     tipoIdentificacion: request.Cliente.TipoIdentificacion,
