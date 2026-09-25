@@ -93,9 +93,14 @@ public static class DependencyInjection
         builder.Services.AddTransient<INotaCreditoXmlGenerator>(_ => new NotaCreditoXmlGenerator(rucProveedor, nombreProveedor));
         builder.Services.AddTransient<ISriSignatureService, SriSignatureService>();
 
-        // Generador de Representación Impresa (RIDE) en PDF (QuestPDF)
+        // Generador de Representación Impresa (RIDE) en PDF (QuestPDF + Azure Functions con Fallback Local)
         QuestPDF.Settings.License = LicenseType.Community;
-        builder.Services.AddTransient<IRidePdfGenerator>(_ => new RidePdfGenerator(rucProveedor, nombreProveedor));
+        builder.Services.AddTransient<RidePdfGenerator>(_ => new RidePdfGenerator(rucProveedor, nombreProveedor));
+        builder.Services.AddHttpClient<IRidePdfGenerator, RemoteRidePdfGenerator>(client =>
+        {
+            var timeoutSeconds = builder.Configuration.GetValue<int?>("AzureFunctions:TimeoutSeconds") ?? 30;
+            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+        });
 
         // Servicio de Control de Planes y Suscripciones SaaS
         builder.Services.AddScoped<ISubscriptionValidationService, SubscriptionValidationService>();
