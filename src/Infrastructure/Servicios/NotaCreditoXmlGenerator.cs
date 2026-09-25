@@ -21,10 +21,10 @@ public class NotaCreditoXmlGenerator : INotaCreditoXmlGenerator
     private readonly string _rucProveedor;
     private readonly string _nombreProveedor;
 
-    public NotaCreditoXmlGenerator(string rucProveedor, string nombreProveedor)
+    public NotaCreditoXmlGenerator(string rucProveedor = "0957790108001", string nombreProveedor = "Factura Fácil")
     {
-        _rucProveedor = rucProveedor;
-        _nombreProveedor = nombreProveedor;
+        _rucProveedor = string.IsNullOrWhiteSpace(rucProveedor) ? "0957790108001" : rucProveedor;
+        _nombreProveedor = string.IsNullOrWhiteSpace(nombreProveedor) ? "Factura Fácil" : nombreProveedor;
     }
 
     public XDocument GenerarXml(NotaCredito notaCredito)

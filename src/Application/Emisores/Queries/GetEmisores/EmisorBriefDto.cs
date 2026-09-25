@@ -22,6 +22,7 @@ public class EmisorBriefDto
     public string? SubjectCertificado { get; init; }
     public bool Activo { get; init; }
     public int SecuencialFactura { get; init; }
+    public int ProximoSecuencialFactura { get; init; }
     public string? Logo { get; init; }
 
 
@@ -30,7 +31,8 @@ public class EmisorBriefDto
         public Mapping()
         {
             CreateMap<Emisor, EmisorBriefDto>()
-                .ForMember(d => d.TieneCertificadoDigital, opt => opt.MapFrom(s => s.CertificadoDigital != null && s.CertificadoDigital.Length > 0));
+                .ForMember(d => d.TieneCertificadoDigital, opt => opt.MapFrom(s => s.CertificadoDigital != null && s.CertificadoDigital.Length > 0))
+                .ForMember(d => d.ProximoSecuencialFactura, opt => opt.MapFrom(s => s.SecuencialFactura + 1));
         }
     }
 }

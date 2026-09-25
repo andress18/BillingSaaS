@@ -80,7 +80,7 @@ public class Emisor : BaseAuditableEntity
             DireccionEstablecimiento = direccionEstablecimiento,
             CodigoEstablecimiento = codigoEstablecimiento,
             PuntoEmision = puntoEmision,
-            SecuencialFactura = secuencialInicial,
+            SecuencialFactura = secuencialInicial > 0 ? secuencialInicial - 1 : 0,
             Ambiente = ambiente,
             ObligadoContabilidad = obligadoContabilidad,
             RegimenRimpe = Constants.RegimenRimpeTipos.Normalizar(regimenRimpe),
@@ -146,7 +146,7 @@ public class Emisor : BaseAuditableEntity
     {
         if (secuencial < 0)
             throw new ArgumentException("El secuencial debe ser mayor o igual a cero.", nameof(secuencial));
-        SecuencialNotaDebito = secuencial;
+        SecuencialNotaDebito = secuencial > 0 ? secuencial - 1 : 0;
     }
 
     public string ObtenerSiguienteSecuencialNotaCredito()
@@ -159,7 +159,7 @@ public class Emisor : BaseAuditableEntity
     {
         if (secuencial < 0)
             throw new ArgumentException("El secuencial debe ser mayor o igual a cero.", nameof(secuencial));
-        SecuencialNotaCredito = secuencial;
+        SecuencialNotaCredito = secuencial > 0 ? secuencial - 1 : 0;
     }
 
     public void ActualizarAmbiente(int nuevoAmbiente)
@@ -205,9 +205,9 @@ public class Emisor : BaseAuditableEntity
         if (secuencialInicial < 0)
             throw new ArgumentException("El secuencial inicial debe ser mayor a cero.", nameof(secuencialInicial));
 
-        if (secuencialInicial != 0)
+        if (secuencialInicial > 0)
         {
-            SecuencialFactura = secuencialInicial;
+            SecuencialFactura = secuencialInicial - 1;
         }
 
         Ruc = ruc;
