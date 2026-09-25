@@ -18,6 +18,10 @@ env:
 jobs:
   build-and-deploy:
     runs-on: windows-latest
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
       - name: 'Checkout GitHub Action'
         uses: actions/checkout@v4
@@ -31,11 +35,17 @@ jobs:
         run: |
           dotnet publish ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/Functions.csproj --configuration Release --output ./output-func
 
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_4C694566A05F43769E51BCCCE2D01F6C }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_30A82FE49C1E4485B55C09F9E5E61CDB }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_DD187674B6944CCB9DC574B2378E144D }}
+
       - name: 'Desplegar en Azure Functions'
         uses: Azure/functions-action@v1
         id: fa
         with:
           app-name: 'stbillingsaasfunc'
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
           package: './output-func'
