@@ -23,10 +23,10 @@ public class NotaDebitoXmlGenerator : INotaDebitoXmlGenerator
     private readonly string _rucProveedor;
     private readonly string _nombreProveedor;
 
-    public NotaDebitoXmlGenerator(string rucProveedor, string nombreProveedor)
+    public NotaDebitoXmlGenerator(string rucProveedor = "1790016919001", string nombreProveedor = "Factura Fácil")
     {
-        _rucProveedor = rucProveedor;
-        _nombreProveedor = nombreProveedor;
+        _rucProveedor = string.IsNullOrWhiteSpace(rucProveedor) ? "1790016919001" : rucProveedor;
+        _nombreProveedor = string.IsNullOrWhiteSpace(nombreProveedor) ? "Factura Fácil" : nombreProveedor;
     }
 
     public XDocument GenerarXml(NotaDebito notaDebito)
