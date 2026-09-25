@@ -8,20 +8,16 @@ on:
       - 'src/Functions/**'
       - 'src/Shared/**'
       - 'src/Infrastructure/**'
-      - '.github/workflows/*stbillingsaasfunc*.yml'
+      - '.github/workflows/deploy_functions.yml'
   workflow_dispatch:
 
 env:
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: 'src/Functions' # Apunta directamente a la carpeta del proyecto de Functions
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: 'src/Functions'
   DOTNET_VERSION: '10.x'
 
 jobs:
   build-and-deploy:
-    runs-on: windows-latest # Recomendado para compatibilidad total con librerías gráficas
-    permissions:
-      id-token: write # Requerido para OIDC
-      contents: read
-
+    runs-on: windows-latest
     steps:
       - name: 'Checkout GitHub Action'
         uses: actions/checkout@v4
@@ -34,15 +30,6 @@ jobs:
       - name: 'Publicar Proyecto de Azure Functions'
         run: |
           dotnet publish ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/Functions.csproj --configuration Release --output ./output-func
-      
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          # Si Azure Portal ya creó los secretos en GitHub, usa esos nombres.
-          # Si no, puedes usar los mismos secretos que ya tienes en facturafacil:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_4C694566A05F43769E51BCCCE2D01F6C }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_30A82FE49C1E4485B55C09F9E5E61CDB }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_DD187674B6944CCB9DC574B2378E144D }}
 
       - name: 'Desplegar en Azure Functions'
         uses: Azure/functions-action@v1
@@ -50,4 +37,5 @@ jobs:
         with:
           app-name: 'stbillingsaasfunc'
           slot-name: 'Production'
+          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
           package: './output-func'
