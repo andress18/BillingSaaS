@@ -12,7 +12,21 @@ public class Emisores : IEndpointGroup
 
         groupBuilder.MapGet(GetEmisores);
         groupBuilder.MapPost(ConfigurarEmisor);
+        groupBuilder.MapPut(ActualizarLogo, "{id:int}/logo");
         groupBuilder.MapGet(GetRegimenesRimpe, "regimenes-rimpe");
+    }
+
+    [EndpointSummary("Actualizar Logotipo del Emisor")]
+    [EndpointDescription("Actualiza o remueve el logotipo en Base64/Data URI utilizado en la representación impresa (RIDE) en PDF.")]
+    public static async Task<NoContent> ActualizarLogo(ISender sender, int id, ActualizarLogoRequest request)
+    {
+        await sender.Send(new BillingSaaS.Application.Emisores.Commands.ActualizarLogoEmisor.ActualizarLogoEmisorCommand
+        {
+            Id = id,
+            Logo = request.Logo
+        });
+
+        return TypedResults.NoContent();
     }
 
     [EndpointSummary("Listar Emisores del Tenant")]
@@ -69,4 +83,7 @@ public record RegimenRimpeDto(
     string? LeyendaSri,
     string Descripcion
 );
+
+public record ActualizarLogoRequest(string? Logo);
+
 

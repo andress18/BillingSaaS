@@ -14,6 +14,10 @@ public record EmitirFacturaCommand : IRequest<EmitirFacturaResponseDto>
     public bool GuardarEnCatalogo { get; init; } = false;
     public CompradorDto Cliente { get; init; } = null!;
     public List<DetalleDto> Detalles { get; init; } = new();
+    public List<CampoAdicionalDto>? CamposAdicionales { get; init; }
+    public List<CampoAdicionalDto>? InfoAdicional { get; init; }
+
+    public record CampoAdicionalDto(string Nombre, string Valor);
 
     public record CompradorDto(
         string TipoIdentificacion,
@@ -149,6 +153,12 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
             ? Domain.Constants.RegimenRimpeTipos.Normalizar(request.RegimenRimpe)
             : emisor.RegimenRimpe;
 
+        var camposSource = request.CamposAdicionales ?? request.InfoAdicional;
+        var camposAdicionales = camposSource?
+            .Where(c => !string.IsNullOrWhiteSpace(c.Nombre) && !string.IsNullOrWhiteSpace(c.Valor))
+            .Select(c => CampoAdicional.Crear(c.Nombre, c.Valor))
+            .ToList();
+
         var factura = Factura.Crear(
             tenantId: emisor.TenantId,
             ambiente: emisor.Ambiente,
@@ -163,7 +173,8 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
             detalles: detalles,
             emisorId: emisor.Id,
             contribuyenteRimpe: regimenRimpe,
-            catalogoClienteId: catalogoClienteId
+            catalogoClienteId: catalogoClienteId,
+            camposAdicionales: camposAdicionales
         );
 
         // 5. Generar Clave de Acceso de 49 dígitos con Módulo 11

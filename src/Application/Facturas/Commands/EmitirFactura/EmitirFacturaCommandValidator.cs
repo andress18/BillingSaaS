@@ -62,5 +62,35 @@ public class EmitirFacturaCommandValidator : AbstractValidator<EmitirFacturaComm
         RuleFor(x => x.RegimenRimpe)
             .Must(r => string.IsNullOrWhiteSpace(r) || Domain.Constants.RegimenRimpeTipos.EsValido(r))
             .WithMessage("El régimen tributario debe ser 'CONTRIBUYENTE RÉGIMEN RIMPE', 'CONTRIBUYENTE NEGOCIO POPULAR - RÉGIMEN RIMPE' o vacío para Régimen General.");
+
+        RuleFor(x => x.CamposAdicionales)
+            .Must(c => c == null || c.Count <= 15)
+            .WithMessage("El SRI permite un máximo de 15 campos adicionales.");
+
+        RuleForEach(x => x.CamposAdicionales).ChildRules(campo =>
+        {
+            campo.RuleFor(c => c.Nombre)
+                .NotEmpty().WithMessage("El nombre del campo adicional es obligatorio.")
+                .MaximumLength(300).WithMessage("El nombre del campo adicional no puede exceder los 300 caracteres.");
+
+            campo.RuleFor(c => c.Valor)
+                .NotEmpty().WithMessage("El valor del campo adicional es obligatorio.")
+                .MaximumLength(300).WithMessage("El valor del campo adicional no puede exceder los 300 caracteres.");
+        });
+
+        RuleFor(x => x.InfoAdicional)
+            .Must(c => c == null || c.Count <= 15)
+            .WithMessage("El SRI permite un máximo de 15 campos adicionales.");
+
+        RuleForEach(x => x.InfoAdicional).ChildRules(campo =>
+        {
+            campo.RuleFor(c => c.Nombre)
+                .NotEmpty().WithMessage("El nombre del campo adicional es obligatorio.")
+                .MaximumLength(300).WithMessage("El nombre del campo adicional no puede exceder los 300 caracteres.");
+
+            campo.RuleFor(c => c.Valor)
+                .NotEmpty().WithMessage("El valor del campo adicional es obligatorio.")
+                .MaximumLength(300).WithMessage("El valor del campo adicional no puede exceder los 300 caracteres.");
+        });
     }
 }

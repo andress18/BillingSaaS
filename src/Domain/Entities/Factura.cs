@@ -114,6 +114,12 @@ public class Factura : BaseAuditableEntity
     public IReadOnlyCollection<DetalleFactura> Detalles => _detalles.AsReadOnly();
     private List<DetalleFactura> _detalles = [];
 
+    // ==========================================
+    // 4. INFORMACIÓN ADICIONAL DINÁMICA (SRI)
+    // ==========================================
+    public IReadOnlyCollection<CampoAdicional> CamposAdicionales => _camposAdicionales.AsReadOnly();
+    private List<CampoAdicional> _camposAdicionales = [];
+
     // Constructor privado para requerir el uso de un Factory Method (DDD)
     private Factura() { }
 
@@ -124,7 +130,8 @@ public class Factura : BaseAuditableEntity
         string direccionMatriz, DateTime fechaEmision, Comprador cliente, 
         List<DetalleFactura> detalles, int emisorId = 0,
         string? contribuyenteRimpe = null,
-        Guid? catalogoClienteId = null)
+        Guid? catalogoClienteId = null,
+        List<CampoAdicional>? camposAdicionales = null)
     {
         var factura = new Factura
         {
@@ -150,6 +157,7 @@ public class Factura : BaseAuditableEntity
             RazonSocialComprador = cliente.RazonSocial,
             IdentificacionComprador = cliente.Identificacion,
             _detalles = detalles,
+            _camposAdicionales = camposAdicionales ?? [],
             ClaveAcceso = string.Empty
         };
 
@@ -243,5 +251,15 @@ public class Factura : BaseAuditableEntity
             throw new InvalidOperationException(
                 "Para facturas mayores a 50 USD es obligatorio especificar los datos del adquirente, no se permite Consumidor Final.");
         }
+    }
+
+    public void AgregarCampoAdicional(string nombre, string valor)
+    {
+        if (_camposAdicionales.Count >= 15)
+        {
+            throw new InvalidOperationException("El SRI permite un máximo de 15 campos adicionales por comprobante.");
+        }
+
+        _camposAdicionales.Add(CampoAdicional.Crear(nombre, valor));
     }
 }

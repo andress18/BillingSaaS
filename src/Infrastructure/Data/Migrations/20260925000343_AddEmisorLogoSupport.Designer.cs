@@ -4,6 +4,7 @@ using BillingSaaS.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BillingSaaS.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260925000343_AddEmisorLogoSupport")]
+    partial class AddEmisorLogoSupport
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1529,33 +1532,6 @@ namespace BillingSaaS.Infrastructure.Data.Migrations
                         .HasForeignKey("EmisorId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.OwnsMany("BillingSaaS.Domain.Entities.CampoAdicional", "CamposAdicionales", b1 =>
-                        {
-                            b1.Property<int>("FacturaId");
-
-                            b1.Property<int>("__synthesizedOrdinal")
-                                .ValueGeneratedOnAddOrUpdate();
-
-                            b1.Property<string>("Nombre")
-                                .IsRequired();
-
-                            b1.Property<string>("Valor")
-                                .IsRequired();
-
-                            b1.HasKey("FacturaId", "__synthesizedOrdinal");
-
-                            b1.ToTable("Facturas");
-
-                            b1
-                                .ToJson("CamposAdicionales")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.WithOwner()
-                                .HasForeignKey("FacturaId");
-                        });
-
-                    b.Navigation("CamposAdicionales");
 
                     b.Navigation("Cliente");
                 });

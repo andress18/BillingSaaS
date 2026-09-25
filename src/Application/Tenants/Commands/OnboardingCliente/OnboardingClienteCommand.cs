@@ -14,9 +14,10 @@ namespace BillingSaaS.Application.Tenants.Commands.OnboardingCliente;
 
 public record OnboardingClienteCommand : IRequest<OnboardingClienteResponseDto>
 {
-    // Datos obligatorios de la cuenta
+    // Datos obligatorios de la cuenta (al menos Email o Username)
     public string NombreOrganizacion { get; init; } = string.Empty;
-    public string Email { get; init; } = string.Empty;
+    public string? Email { get; init; }
+    public string? Username { get; init; }
     public string? PasswordInicial { get; init; }
     public string PlanCodigo { get; init; } = "MIGRACION_SISTEMA"; // "MIGRACION_SISTEMA" ($20) o "MIGRACION_FIRMA" ($45)
     public string Frecuencia { get; init; } = "ANUAL";             // "ANUAL" o "MENSUAL"
@@ -41,7 +42,8 @@ public record OnboardingClienteResponseDto
 {
     public Guid TenantId { get; init; }
     public string NombreOrganizacion { get; init; } = string.Empty;
-    public string Email { get; init; } = string.Empty;
+    public string? Email { get; init; }
+    public string? Username { get; init; }
     public string PasswordTemporal { get; init; } = string.Empty;
     public Guid? PartnerId { get; init; }
     public string PlanNombre { get; init; } = string.Empty;
@@ -126,12 +128,16 @@ public class OnboardingClienteCommandHandler : IRequestHandler<OnboardingCliente
         _context.Tenants.Add(tenant);
 
         // 5. Crear Usuario Cliente
-        var email = request.Email.Trim().ToLowerInvariant();
+        var email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim().ToLowerInvariant();
+        var username = string.IsNullOrWhiteSpace(request.Username)
+            ? (email ?? throw new InvalidOperationException("Debe proporcionar un email o nombre de usuario."))
+            : request.Username.Trim();
+
         var password = string.IsNullOrWhiteSpace(request.PasswordInicial)
             ? $"Temp#{Guid.NewGuid().ToString()[..6]}!"
             : request.PasswordInicial.Trim();
 
-        var (createResult, userId) = await _identityService.CreateUserWithTenantAsync(email, password, tenant.Id);
+        var (createResult, userId) = await _identityService.CreateUserWithTenantAsync(username, email, password, tenant.Id);
         if (!createResult.Succeeded)
         {
             throw new InvalidOperationException($"No se pudo crear el usuario del cliente: {string.Join(", ", createResult.Errors)}");
@@ -196,13 +202,15 @@ public class OnboardingClienteCommandHandler : IRequestHandler<OnboardingCliente
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        var mensaje = $"Hola {request.NombreOrganizacion}, tu cuenta de facturación electrónica ha sido activada con el {plan.Nombre}. Puedes ingresar con tu correo: {email} y tu contraseña temporal: {password}";
+        var loginIdentifier = !string.IsNullOrWhiteSpace(username) ? username : email;
+        var mensaje = $"Hola {request.NombreOrganizacion}, tu cuenta de facturación electrónica ha sido activada con el {plan.Nombre}. Puedes ingresar con tu usuario: {loginIdentifier} y tu contraseña temporal: {password}";
 
         return new OnboardingClienteResponseDto
         {
             TenantId = tenant.Id,
             NombreOrganizacion = tenant.Nombre,
             Email = email,
+            Username = username,
             PasswordTemporal = password,
             PartnerId = tenant.PartnerId,
             PlanNombre = plan.Nombre,

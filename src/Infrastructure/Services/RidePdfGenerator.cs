@@ -75,6 +75,7 @@ public class RidePdfGenerator : IRidePdfGenerator
         string? barcodeSvg = GenerarCodigoBarrasSvg(claveAcceso);
 
         // 3. Procesamiento de logo opcional
+        logoBase64 ??= emisor?.Logo;
         byte[]? logoBytes = null;
         if (!string.IsNullOrWhiteSpace(logoBase64))
         {
@@ -120,7 +121,7 @@ public class RidePdfGenerator : IRidePdfGenerator
                         {
                             if (logoBytes != null && logoBytes.Length > 0)
                             {
-                                leftCol.Item().MaxHeight(50).PaddingBottom(5).Image(logoBytes).FitArea();
+                                leftCol.Item().MaxHeight(85).PaddingBottom(6).Image(logoBytes).FitArea();
                             }
 
                             leftCol.Item().Border(0.8f).BorderColor(Colors.Grey.Medium).CornerRadius(4).Padding(6).Column(emisorBox =>
@@ -335,8 +336,27 @@ public class RidePdfGenerator : IRidePdfGenerator
                                     });
                                 }
 
+                                if (factura.CamposAdicionales != null && factura.CamposAdicionales.Count > 0)
+                                {
+                                    foreach (var campo in factura.CamposAdicionales)
+                                    {
+                                        if (campo.Nombre.Equals("Email", StringComparison.OrdinalIgnoreCase) ||
+                                            campo.Nombre.Equals("Dirección", StringComparison.OrdinalIgnoreCase) ||
+                                            campo.Nombre.Equals("Direccion", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            continue;
+                                        }
+
+                                        adicionalBox.Item().PaddingTop(2).Text(t =>
+                                        {
+                                            t.Span($"{campo.Nombre}: ").Bold();
+                                            t.Span(campo.Valor);
+                                        });
+                                    }
+                                }
+
                                 // Leyenda técnica de software / Anexo 26 SRI
-                                adicionalBox.Item().PaddingTop(3).Text("Software: BillingSaaS (RUC Proveedor: 0957790108001 - Anexo 26)").FontSize(7f).FontColor(Colors.Grey.Darken2);
+                                adicionalBox.Item().PaddingTop(3).Text("Software: Factura Fácil (RUC Proveedor: 0957790108001 - Anexo 26)").FontSize(7f).FontColor(Colors.Grey.Darken2);
                             });
 
                             // Cuadro de Formas de Pago
@@ -452,6 +472,7 @@ public class RidePdfGenerator : IRidePdfGenerator
         string claveAcceso = notaDebito.ClaveAcceso ?? string.Empty;
         string? barcodeSvg = GenerarCodigoBarrasSvg(claveAcceso);
 
+        logoBase64 ??= emisor?.Logo;
         byte[]? logoBytes = null;
         if (!string.IsNullOrWhiteSpace(logoBase64))
         {
@@ -493,7 +514,7 @@ public class RidePdfGenerator : IRidePdfGenerator
                         {
                             if (logoBytes != null && logoBytes.Length > 0)
                             {
-                                leftCol.Item().MaxHeight(50).PaddingBottom(5).Image(logoBytes).FitArea();
+                                leftCol.Item().MaxHeight(85).PaddingBottom(6).Image(logoBytes).FitArea();
                             }
 
                             leftCol.Item().Border(0.8f).BorderColor(Colors.Grey.Medium).CornerRadius(4).Padding(6).Column(emisorBox =>
@@ -802,6 +823,7 @@ public class RidePdfGenerator : IRidePdfGenerator
         string? barcodeSvg = GenerarCodigoBarrasSvg(claveAcceso);
 
         // 3. Procesamiento de logo opcional
+        logoBase64 ??= emisor?.Logo;
         byte[]? logoBytes = null;
         if (!string.IsNullOrWhiteSpace(logoBase64))
         {
@@ -842,10 +864,9 @@ public class RidePdfGenerator : IRidePdfGenerator
                         // Columna Izquierda: Emisor
                         row.RelativeItem(5).Column(leftCol =>
                         {
-                            if (logoBytes != null)
+                            if (logoBytes != null && logoBytes.Length > 0)
                             {
-                                leftCol.Item().MaxHeight(65).MaxWidth(180).Image(logoBytes);
-                                leftCol.Item().PaddingTop(5);
+                                leftCol.Item().MaxHeight(85).PaddingBottom(6).Image(logoBytes).FitArea();
                             }
 
                             leftCol.Item().Border(0.8f).BorderColor(Colors.Grey.Medium).CornerRadius(4).Padding(6).Column(emisorBox =>

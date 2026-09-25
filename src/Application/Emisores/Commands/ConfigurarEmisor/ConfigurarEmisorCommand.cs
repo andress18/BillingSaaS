@@ -20,6 +20,7 @@ public record ConfigurarEmisorCommand : IRequest<int>
     public string? RegimenRimpe { get; init; }
     public string? ContribuyenteEspecial { get; init; }
     public int SecuencialInicial { get; init; } = 0;
+    public string? Logo { get; init; }
 
     // Certificado digital .p12 (base64 o hex) y su contraseña
     public string? CertificadoBase64 { get; init; }
@@ -66,7 +67,8 @@ public class ConfigurarEmisorCommandHandler : IRequestHandler<ConfigurarEmisorCo
                 direccionEstablecimiento: request.DireccionEstablecimiento,
                 regimenRimpe: request.RegimenRimpe,
                 contribuyenteEspecial: request.ContribuyenteEspecial,
-                secuencialInicial: request.SecuencialInicial
+                secuencialInicial: request.SecuencialInicial,
+                logo: request.Logo
             );
 
             _context.Emisores.Add(emisor);
@@ -87,6 +89,8 @@ public class ConfigurarEmisorCommandHandler : IRequestHandler<ConfigurarEmisorCo
                 contribuyenteEspecial: request.ContribuyenteEspecial,
                 secuencialInicial: request.SecuencialInicial
             );
+
+            emisor.ActualizarLogo(request.Logo);
         }
 
         if (!string.IsNullOrWhiteSpace(request.CertificadoBase64) && !string.IsNullOrWhiteSpace(request.PasswordCertificado))

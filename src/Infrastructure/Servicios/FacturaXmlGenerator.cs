@@ -143,7 +143,15 @@ public class FacturaXmlGenerator : IFacturaXmlGenerator
                     !string.IsNullOrWhiteSpace(factura.Cliente.CorreoElectronico)
                         ? new XElement("campoAdicional", new XAttribute("nombre", "Email"),
                             factura.Cliente.CorreoElectronico)
-                        : null
+                        : null,
+                    factura.CamposAdicionales?
+                        .Where(c => !string.IsNullOrWhiteSpace(c.Nombre) && !string.IsNullOrWhiteSpace(c.Valor) &&
+                                    !c.Nombre.Equals("Email", StringComparison.OrdinalIgnoreCase) &&
+                                    !c.Nombre.Equals("Direccion", StringComparison.OrdinalIgnoreCase) &&
+                                    !c.Nombre.Equals("Dirección", StringComparison.OrdinalIgnoreCase) &&
+                                    !c.Nombre.Equals("RUC Proveedor", StringComparison.OrdinalIgnoreCase) &&
+                                    !c.Nombre.Equals("Regimen", StringComparison.OrdinalIgnoreCase))
+                        .Select(c => new XElement("campoAdicional", new XAttribute("nombre", c.Nombre), c.Valor))
                 )
             )
         );
