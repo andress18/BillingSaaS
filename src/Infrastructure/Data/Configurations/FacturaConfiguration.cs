@@ -59,6 +59,11 @@ public class FacturaConfiguration : IEntityTypeConfiguration<Factura>
         builder.HasOne(f => f.Cliente)
             .WithMany()
             .HasForeignKey("ClienteId");
+
+        builder.OwnsMany(f => f.CamposAdicionales, a =>
+        {
+            a.ToJson();
+        });
     }
 }
 

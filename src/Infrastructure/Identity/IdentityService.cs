@@ -31,10 +31,15 @@ public class IdentityService : IIdentityService
 
     public async Task<(Result Result, string UserId)> CreateUserAsync(string userName, string password)
     {
+        return await CreateUserAsync(userName, userName.Contains('@') ? userName : null, password);
+    }
+
+    public async Task<(Result Result, string UserId)> CreateUserAsync(string userName, string? email, string password)
+    {
         var user = new ApplicationUser
         {
             UserName = userName,
-            Email = userName,
+            Email = email,
         };
 
         var result = await _userManager.CreateAsync(user, password);
@@ -44,10 +49,15 @@ public class IdentityService : IIdentityService
 
     public async Task<(Result Result, string UserId)> CreateUserWithTenantAsync(string userName, string password, Guid tenantId, string? role = null)
     {
+        return await CreateUserWithTenantAsync(userName, userName.Contains('@') ? userName : null, password, tenantId, role);
+    }
+
+    public async Task<(Result Result, string UserId)> CreateUserWithTenantAsync(string userName, string? email, string password, Guid tenantId, string? role = null)
+    {
         var user = new ApplicationUser
         {
             UserName = userName,
-            Email = userName,
+            Email = email,
             TenantId = tenantId
         };
 

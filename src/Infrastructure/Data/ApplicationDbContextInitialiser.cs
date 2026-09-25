@@ -91,6 +91,11 @@ public class ApplicationDbContextInitialiser
                                 await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Facturas ADD COLUMN CatalogoClienteId TEXT;");
                             }
 
+                            if (!columnasExistentes.Contains("CamposAdicionales"))
+                            {
+                                await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Facturas ADD COLUMN CamposAdicionales TEXT NULL;");
+                            }
+
                             // Asegurar CatalogoProductoId en DetalleFactura
                             using var cmdDetalle = connection.CreateCommand();
                             cmdDetalle.CommandText = "PRAGMA table_info(DetalleFactura);";

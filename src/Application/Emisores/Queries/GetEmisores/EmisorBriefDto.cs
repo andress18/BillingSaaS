@@ -22,6 +22,7 @@ public class EmisorBriefDto
     public string? SubjectCertificado { get; init; }
     public bool Activo { get; init; }
     public int SecuencialFactura { get; init; }
+    public string? Logo { get; init; }
 
 
     private class Mapping : Profile

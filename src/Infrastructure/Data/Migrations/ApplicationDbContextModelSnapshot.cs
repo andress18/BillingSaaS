@@ -350,6 +350,9 @@ namespace BillingSaaS.Infrastructure.Data.Migrations
                     b.Property<string>("LastModifiedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Logo")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("NombreComercial")
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
@@ -1526,6 +1529,33 @@ namespace BillingSaaS.Infrastructure.Data.Migrations
                         .HasForeignKey("EmisorId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.OwnsMany("BillingSaaS.Domain.Entities.CampoAdicional", "CamposAdicionales", b1 =>
+                        {
+                            b1.Property<int>("FacturaId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAddOrUpdate();
+
+                            b1.Property<string>("Nombre")
+                                .IsRequired();
+
+                            b1.Property<string>("Valor")
+                                .IsRequired();
+
+                            b1.HasKey("FacturaId", "__synthesizedOrdinal");
+
+                            b1.ToTable("Facturas");
+
+                            b1
+                                .ToJson("CamposAdicionales")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.WithOwner()
+                                .HasForeignKey("FacturaId");
+                        });
+
+                    b.Navigation("CamposAdicionales");
 
                     b.Navigation("Cliente");
                 });

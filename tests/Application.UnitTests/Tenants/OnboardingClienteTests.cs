@@ -58,6 +58,10 @@ public class OnboardingClienteTests
             .Setup(i => i.CreateUserWithTenantAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>()))
             .ReturnsAsync((Result.Success(), Guid.NewGuid().ToString()));
 
+        _identityServiceMock
+            .Setup(i => i.CreateUserWithTenantAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string?>()))
+            .ReturnsAsync((Result.Success(), Guid.NewGuid().ToString()));
+
         // Seed migration plans
         _context.Planes.AddRange(
             Plan.Crear("MIGRACION_SISTEMA", "Plan Migración (Solo Sistema)", "Solo sistema", 3m, 20m, null, null, 1, "01,04"),
@@ -243,6 +247,116 @@ public class OnboardingClienteTests
         result.Count.ShouldBe(2);
         result.ShouldContain(c => c.NombreOrganizacion == "Cliente P");
         result.ShouldContain(c => c.NombreOrganizacion == "Cliente Directo");
+    }
+
+    [Test]
+    public async Task OnboardingCliente_ConSoloUsername_DebeCrearUsuarioConUsernameYEmailNull()
+    {
+        // Arrange
+        _userMock.Setup(u => u.Id).Returns(_partnerUserId);
+        _userMock.Setup(u => u.TenantId).Returns(_partnerTenantId);
+        _identityServiceMock.Setup(i => i.IsInRoleAsync(_partnerUserId, Roles.Partner)).ReturnsAsync(true);
+        _identityServiceMock.Setup(i => i.IsInRoleAsync(_partnerUserId, Roles.Administrator)).ReturnsAsync(false);
+
+        string? capturedUsername = null;
+        string? capturedEmail = null;
+        _identityServiceMock
+            .Setup(i => i.CreateUserWithTenantAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string?>()))
+            .Callback<string, string?, string, Guid, string?>((u, e, p, t, r) =>
+            {
+                capturedUsername = u;
+                capturedEmail = e;
+            })
+            .ReturnsAsync((Result.Success(), Guid.NewGuid().ToString()));
+
+        var handler = new OnboardingClienteCommandHandler(
+            _context,
+            _identityServiceMock.Object,
+            _userMock.Object,
+            _encryptionServiceMock.Object,
+            _timeProviderMock.Object);
+
+        var command = new OnboardingClienteCommand
+        {
+            NombreOrganizacion = "Distribuidora Los Andes",
+            Username = "losandes_ec",
+            Email = null,
+            PlanCodigo = "MIGRACION_SISTEMA",
+            Frecuencia = "ANUAL"
+        };
+
+        // Act
+        var response = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        response.ShouldNotBeNull();
+        response.Username.ShouldBe("losandes_ec");
+        response.Email.ShouldBeNull();
+        capturedUsername.ShouldBe("losandes_ec");
+        capturedEmail.ShouldBeNull();
+    }
+
+    [Test]
+    public async Task OnboardingCliente_ConEmailYUsername_DebeCrearUsuarioConAmbos()
+    {
+        // Arrange
+        _userMock.Setup(u => u.Id).Returns(_partnerUserId);
+        _userMock.Setup(u => u.TenantId).Returns(_partnerTenantId);
+        _identityServiceMock.Setup(i => i.IsInRoleAsync(_partnerUserId, Roles.Partner)).ReturnsAsync(true);
+        _identityServiceMock.Setup(i => i.IsInRoleAsync(_partnerUserId, Roles.Administrator)).ReturnsAsync(false);
+
+        string? capturedUsername = null;
+        string? capturedEmail = null;
+        _identityServiceMock
+            .Setup(i => i.CreateUserWithTenantAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string?>()))
+            .Callback<string, string?, string, Guid, string?>((u, e, p, t, r) =>
+            {
+                capturedUsername = u;
+                capturedEmail = e;
+            })
+            .ReturnsAsync((Result.Success(), Guid.NewGuid().ToString()));
+
+        var handler = new OnboardingClienteCommandHandler(
+            _context,
+            _identityServiceMock.Object,
+            _userMock.Object,
+            _encryptionServiceMock.Object,
+            _timeProviderMock.Object);
+
+        var command = new OnboardingClienteCommand
+        {
+            NombreOrganizacion = "Comercial Pichincha",
+            Username = "pichincha_corp",
+            Email = "contacto@pichincha.com",
+            PlanCodigo = "MIGRACION_SISTEMA",
+            Frecuencia = "ANUAL"
+        };
+
+        // Act
+        var response = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        response.ShouldNotBeNull();
+        response.Username.ShouldBe("pichincha_corp");
+        response.Email.ShouldBe("contacto@pichincha.com");
+        capturedUsername.ShouldBe("pichincha_corp");
+        capturedEmail.ShouldBe("contacto@pichincha.com");
+    }
+
+    [Test]
+    public void OnboardingClienteValidator_SinEmailNiUsername_DebeFallarValidacion()
+    {
+        var validator = new OnboardingClienteCommandValidator();
+        var command = new OnboardingClienteCommand
+        {
+            NombreOrganizacion = "Comercial Pichincha",
+            Username = null,
+            Email = null
+        };
+
+        var result = validator.Validate(command);
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.ErrorMessage.Contains("correo electrónico o un nombre de usuario"));
     }
 }
 

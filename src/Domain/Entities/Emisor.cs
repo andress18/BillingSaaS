@@ -24,6 +24,7 @@ public class Emisor : BaseAuditableEntity
     public bool ObligadoContabilidad { get; private set; }
     public string? RegimenRimpe { get; private set; }                  // Ej: "CONTRIBUYENTE RÉGIMEN RIMPE"
     public string? ContribuyenteEspecial { get; private set; }         // Número de resolución si aplica
+    public string? Logo { get; private set; }                          // Logotipo del negocio en formato Base64 / Data URI
 
     // Firma Electrónica (.p12 encriptado)
     public byte[]? CertificadoDigital { get; private set; }
@@ -48,7 +49,8 @@ public class Emisor : BaseAuditableEntity
         string? direccionEstablecimiento = null,
         string? regimenRimpe = null,
         string? contribuyenteEspecial = null,
-        int secuencialInicial = 0)
+        int secuencialInicial = 0,
+        string? logo = null)
     {
         if (tenantId == Guid.Empty)
             throw new ArgumentException("El TenantId es obligatorio.", nameof(tenantId));
@@ -83,8 +85,14 @@ public class Emisor : BaseAuditableEntity
             ObligadoContabilidad = obligadoContabilidad,
             RegimenRimpe = Constants.RegimenRimpeTipos.Normalizar(regimenRimpe),
             ContribuyenteEspecial = contribuyenteEspecial,
+            Logo = logo,
             Activo = true
         };
+    }
+
+    public void ActualizarLogo(string? logo)
+    {
+        Logo = logo;
     }
 
     public void ConfigurarCertificado(
