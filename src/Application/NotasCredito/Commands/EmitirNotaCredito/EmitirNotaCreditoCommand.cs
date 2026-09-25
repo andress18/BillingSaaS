@@ -214,7 +214,9 @@ public class EmitirNotaCreditoCommandHandler : IRequestHandler<EmitirNotaCredito
             Secuencial = $"{emisor.CodigoEstablecimiento}-{emisor.PuntoEmision}-{secuencial}",
             Estado = notaCredito.Estado,
             EsRecibida = esRecibida,
-            MensajeDevolucion = mensajeDevolucion
+            MensajeDevolucion = mensajeDevolucion,
+            ProximoSecuencial = emisor.SecuencialNotaCredito,
+            ProximoSecuencialNumero = emisor.SecuencialNotaCredito.ToString("D9")
         };
     }
 }

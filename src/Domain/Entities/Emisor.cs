@@ -80,7 +80,7 @@ public class Emisor : BaseAuditableEntity
             DireccionEstablecimiento = direccionEstablecimiento,
             CodigoEstablecimiento = codigoEstablecimiento,
             PuntoEmision = puntoEmision,
-            SecuencialFactura = secuencialInicial > 0 ? secuencialInicial - 1 : 0,
+            SecuencialFactura = secuencialInicial > 0 ? secuencialInicial : 1,
             Ambiente = ambiente,
             ObligadoContabilidad = obligadoContabilidad,
             RegimenRimpe = Constants.RegimenRimpeTipos.Normalizar(regimenRimpe),
@@ -132,34 +132,37 @@ public class Emisor : BaseAuditableEntity
 
     public string ObtenerSiguienteSecuencialFactura()
     {
-        SecuencialFactura++;
-        return SecuencialFactura.ToString("D9");
+        var actual = SecuencialFactura <= 0 ? 1 : SecuencialFactura;
+        SecuencialFactura = actual + 1;
+        return actual.ToString("D9");
     }
 
     public string ObtenerSiguienteSecuencialNotaDebito()
     {
-        SecuencialNotaDebito++;
-        return SecuencialNotaDebito.ToString("D9");
+        var actual = SecuencialNotaDebito <= 0 ? 1 : SecuencialNotaDebito;
+        SecuencialNotaDebito = actual + 1;
+        return actual.ToString("D9");
     }
 
     public void EstablecerSecuencialNotaDebito(int secuencial)
     {
         if (secuencial < 0)
             throw new ArgumentException("El secuencial debe ser mayor o igual a cero.", nameof(secuencial));
-        SecuencialNotaDebito = secuencial > 0 ? secuencial - 1 : 0;
+        SecuencialNotaDebito = secuencial > 0 ? secuencial : 1;
     }
 
     public string ObtenerSiguienteSecuencialNotaCredito()
     {
-        SecuencialNotaCredito++;
-        return SecuencialNotaCredito.ToString("D9");
+        var actual = SecuencialNotaCredito <= 0 ? 1 : SecuencialNotaCredito;
+        SecuencialNotaCredito = actual + 1;
+        return actual.ToString("D9");
     }
 
     public void EstablecerSecuencialNotaCredito(int secuencial)
     {
         if (secuencial < 0)
             throw new ArgumentException("El secuencial debe ser mayor o igual a cero.", nameof(secuencial));
-        SecuencialNotaCredito = secuencial > 0 ? secuencial - 1 : 0;
+        SecuencialNotaCredito = secuencial > 0 ? secuencial : 1;
     }
 
     public void ActualizarAmbiente(int nuevoAmbiente)
@@ -207,7 +210,7 @@ public class Emisor : BaseAuditableEntity
 
         if (secuencialInicial > 0)
         {
-            SecuencialFactura = secuencialInicial - 1;
+            SecuencialFactura = secuencialInicial;
         }
 
         Ruc = ruc;

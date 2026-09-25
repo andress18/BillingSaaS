@@ -8,5 +8,7 @@ public class EmitirNotaCreditoResponseDto
     public string Estado { get; init; } = null!;
     public bool EsRecibida { get; init; }
     public string? MensajeDevolucion { get; init; }
+    public int ProximoSecuencial { get; init; }
+    public string ProximoSecuencialNumero { get; init; } = string.Empty;
 }
 

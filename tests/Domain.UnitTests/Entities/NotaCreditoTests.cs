@@ -113,11 +113,11 @@ public class NotaCreditoTests
 
         var primerSecuencial = emisor.ObtenerSiguienteSecuencialNotaCredito();
         primerSecuencial.ShouldBe("000000001");
-        emisor.SecuencialNotaCredito.ShouldBe(1);
+        emisor.SecuencialNotaCredito.ShouldBe(2);
 
         var segundoSecuencial = emisor.ObtenerSiguienteSecuencialNotaCredito();
         segundoSecuencial.ShouldBe("000000002");
-        emisor.SecuencialNotaCredito.ShouldBe(2);
+        emisor.SecuencialNotaCredito.ShouldBe(3);
     }
 }
 
