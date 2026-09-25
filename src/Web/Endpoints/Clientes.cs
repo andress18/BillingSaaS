@@ -3,6 +3,7 @@ using BillingSaaS.Application.Clientes.Commands.DesactivarCliente;
 using BillingSaaS.Application.Clientes.Commands.UpsertCliente;
 using BillingSaaS.Application.Clientes.Queries.ConsultarSri;
 using BillingSaaS.Application.Clientes.Queries.GetClienteById;
+using BillingSaaS.Application.Clientes.Queries.GetClientes;
 using BillingSaaS.Application.Clientes.Queries.SearchClientes;
 using BillingSaaS.Application.Common.Interfaces;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -18,12 +19,24 @@ public class Clientes : IEndpointGroup
     {
         groupBuilder.RequireAuthorization();
 
+        groupBuilder.MapGet(GetClientes, "");
         groupBuilder.MapGet(SearchClientes, "search");
         groupBuilder.MapGet(GetClienteById, "{id:guid}");
         groupBuilder.MapGet(ConsultarSri, "consultar-sri/{identificacion}");
         groupBuilder.MapPost(UpsertCliente);
         groupBuilder.MapPut(ActualizarCliente, "{id:guid}");
         groupBuilder.MapDelete(DesactivarCliente, "{id:guid}");
+    }
+
+    [EndpointSummary("Listar todos los clientes del catálogo")]
+    [EndpointDescription("Obtiene la lista completa de compradores/clientes del catálogo del tenant con soporte de filtrado opcional.")]
+    public static async Task<Ok<List<ClienteLookupDto>>> GetClientes(
+        ISender sender,
+        [FromQuery(Name = "q")] string? q,
+        [FromQuery] bool soloActivos = true)
+    {
+        var response = await sender.Send(new GetClientesQuery(q, soloActivos));
+        return TypedResults.Ok(response);
     }
 
     [EndpointSummary("Búsqueda rápida y autocompletado de clientes")]

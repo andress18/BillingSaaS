@@ -188,5 +188,32 @@ public class ProductosCqrsTests
         var searchResults = await searchHandler.Handle(new SearchProductosQuery("PROD-DEL"), CancellationToken.None);
         searchResults.ShouldBeEmpty();
     }
+
+    [Test]
+    public async Task CrearProducto_CuandoAlcanzaLimite25Productos_DebeLanzarInvalidOperationException()
+    {
+        var handler = new CrearProductoCommandHandler(_context, _userMock.Object);
+
+        // Registrar 25 productos previos
+        for (int i = 1; i <= 25; i++)
+        {
+            var p = CatalogoProducto.Crear(_tenantId, $"PROD-{i:D2}", $"Producto {i}", 10m);
+            _context.CatalogoProductos.Add(p);
+        }
+        await _context.SaveChangesAsync();
+
+        // Intentar registrar el producto número 26
+        var command = new CrearProductoCommand
+        {
+            CodigoPrincipal = "PROD-26",
+            Descripcion = "Producto 26 Excedido",
+            PrecioUnitario = 10m
+        };
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
+            handler.Handle(command, CancellationToken.None));
+
+        ex.Message.ShouldContain("límite máximo permitido de 25 productos o servicios");
+    }
 }
 

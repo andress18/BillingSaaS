@@ -245,5 +245,52 @@ public class SubscriptionValidationServiceTests
         await Should.NotThrowAsync(() =>
             _service.ValidarEmisionAsync(tenantId, "01", "001", CancellationToken.None));
     }
+
+    [Test]
+    public async Task ValidarEmisionAsync_LimiteAlcanzadoEnFacturas_DebePermitirNotasCreditoSiNoHaLlegadoAlLimite()
+    {
+        var tenantId = Guid.NewGuid();
+        // Plan permite 2 documentos por mes para cada tipo
+        var plan = Plan.Crear("TEST_LIMIT_SEP", "Plan Test", "Test", 5m, 50m, 2, 24, 1, "01,04,05", true);
+        _context.Planes.Add(plan);
+        await _context.SaveChangesAsync();
+
+        var sub = TenantSubscription.Crear(
+            tenantId,
+            plan.Id,
+            _now.AddDays(-10),
+            _now.AddDays(20),
+            "MENSUAL"
+        );
+        _context.Suscripciones.Add(sub);
+
+        var emisor = Emisor.Crear(tenantId, "0957790108001", "Mi Empresa", "Dir", codigoEstablecimiento: "001");
+        _context.Emisores.Add(emisor);
+        await _context.SaveChangesAsync();
+
+        // 2 facturas previas
+        var f1 = Factura.Crear(tenantId, 1, "Mi Empresa", "0957790108001", "001", "001", "000000001", "Dir", _now.Date,
+            Comprador.Crear("07", "9999999999999", "CF", "Dir"), [], emisor.Id);
+        f1.MarcarComoAutorizada("1234567890123456789012345678901234567890123456789", _now);
+
+        var f2 = Factura.Crear(tenantId, 1, "Mi Empresa", "0957790108001", "001", "001", "000000002", "Dir", _now.Date,
+            Comprador.Crear("07", "9999999999999", "CF", "Dir"), [], emisor.Id);
+        f2.MarcarComoAutorizada("1234567890123456789012345678901234567890123456788", _now);
+
+        _context.Facturas.AddRange(f1, f2);
+        await _context.SaveChangesAsync();
+
+        // Factura (01) debe bloquearse
+        await Should.ThrowAsync<SubscriptionLimitExceededException>(() =>
+            _service.ValidarEmisionAsync(tenantId, "01", "001", CancellationToken.None));
+
+        // Nota de Crédito (04) debe permitirse porque no tiene notas de crédito emitidas en este ciclo
+        await Should.NotThrowAsync(() =>
+            _service.ValidarEmisionAsync(tenantId, "04", "001", CancellationToken.None));
+
+        // Nota de Débito (05) debe permitirse
+        await Should.NotThrowAsync(() =>
+            _service.ValidarEmisionAsync(tenantId, "05", "001", CancellationToken.None));
+    }
 }
 

@@ -223,8 +223,8 @@ public class Factura : BaseAuditableEntity
 
     private void ValidarInvariantes()
     {
-        // Bloqueo a consumidor final si supera $50
-        if (ImporteTotal >= 50.00m && Cliente.EsConsumidorFinal())
+        // Bloqueo a consumidor final si supera los $50.00 USD (SRI: hasta $50.00 permitido a Consumidor Final)
+        if (ImporteTotal > 50.00m && Cliente.EsConsumidorFinal())
         {
             throw new InvalidOperationException("El importe supera los $50.00 USD. Se requieren datos del adquirente.");
         }

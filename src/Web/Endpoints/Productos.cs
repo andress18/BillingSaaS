@@ -2,6 +2,7 @@ using BillingSaaS.Application.Productos.Commands.ActualizarProducto;
 using BillingSaaS.Application.Productos.Commands.CrearProducto;
 using BillingSaaS.Application.Productos.Commands.DesactivarProducto;
 using BillingSaaS.Application.Productos.Queries.GetProductoById;
+using BillingSaaS.Application.Productos.Queries.GetProductos;
 using BillingSaaS.Application.Productos.Queries.SearchProductos;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -16,11 +17,23 @@ public class Productos : IEndpointGroup
     {
         groupBuilder.RequireAuthorization();
 
+        groupBuilder.MapGet(GetProductos, "");
         groupBuilder.MapGet(SearchProductos, "search");
         groupBuilder.MapGet(GetProductoById, "{id:guid}");
         groupBuilder.MapPost(CrearProducto);
         groupBuilder.MapPut(ActualizarProducto, "{id:guid}");
         groupBuilder.MapDelete(DesactivarProducto, "{id:guid}");
+    }
+
+    [EndpointSummary("Listar todos los productos y servicios del catálogo")]
+    [EndpointDescription("Obtiene la lista completa de ítems (productos y servicios) del catálogo del tenant con soporte de filtrado opcional.")]
+    public static async Task<Ok<List<ProductoLookupDto>>> GetProductos(
+        ISender sender,
+        [FromQuery(Name = "q")] string? q,
+        [FromQuery] bool soloActivos = true)
+    {
+        var response = await sender.Send(new GetProductosQuery(q, soloActivos));
+        return TypedResults.Ok(response);
     }
 
     [EndpointSummary("Búsqueda rápida y autocompletado de productos/servicios")]

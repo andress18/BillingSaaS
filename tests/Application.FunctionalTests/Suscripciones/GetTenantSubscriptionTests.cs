@@ -51,7 +51,8 @@ public class GetTenantSubscriptionTests : TestBase
         result.ShouldNotBeNull();
         result.PlanCodigo.ShouldBe("MIGRACION_SISTEMA");
         result.PlanNombre.ShouldBe("Plan Migración (Solo Sistema)");
-        result.EsIlimitado.ShouldBeTrue();
+        result.EsIlimitado.ShouldBeFalse();
+        result.DocumentosMaximos.ShouldBe(100);
         result.Estado.ShouldBe("ACTIVO");
         result.DiasRestantes.ShouldBeGreaterThan(0);
         result.EnPeriodoGracia.ShouldBeFalse();
@@ -97,7 +98,8 @@ public class GetTenantSubscriptionTests : TestBase
         renovarResult.ShouldNotBeNull();
         renovarResult.PlanCodigo.ShouldBe("MIGRACION_FIRMA");
         renovarResult.PlanNombre.ShouldBe("Plan Migración + Firma Digital");
-        renovarResult.EsIlimitado.ShouldBeTrue();
+        renovarResult.EsIlimitado.ShouldBeFalse();
+        renovarResult.DocumentosMaximos.ShouldBe(100);
         renovarResult.Estado.ShouldBe("ACTIVO");
         renovarResult.DiasRestantes.ShouldBeGreaterThan(300);
     }

@@ -31,6 +31,18 @@ public class EmitirFacturaCommandValidator : AbstractValidator<EmitirFacturaComm
             .EmailAddress().WithMessage("El formato del correo electrónico ingresado no es válido.")
             .When(x => !string.IsNullOrWhiteSpace(x.Cliente.CorreoElectronico));
 
+        RuleFor(x => x)
+            .Must(x =>
+            {
+                if (x.Cliente == null || x.Detalles == null || !x.Detalles.Any()) return true;
+                bool esConsumidorFinal = x.Cliente.TipoIdentificacion == "07" || x.Cliente.Identificacion == "9999999999999";
+                if (!esConsumidorFinal) return true;
+
+                decimal total = x.Detalles.Sum(d => (d.Cantidad * d.PrecioUnitario - d.Descuento) + (d.Impuestos?.Sum(i => Math.Round(i.BaseImponible * (i.Tarifa / 100m), 2)) ?? 0m));
+                return total <= 50.00m;
+            })
+            .WithMessage("Las ventas a Consumidor Final no pueden superar los $50.00 USD. Se requieren los datos de identificación del adquirente.");
+
         RuleFor(x => x.Detalles)
             .NotEmpty().WithMessage("La factura debe contener al menos un detalle de producto o servicio.");
 

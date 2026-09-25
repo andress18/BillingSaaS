@@ -162,5 +162,34 @@ public class ClientesCqrsTests
         var searchResults = await searchHandler.Handle(new SearchClientesQuery("DESACTIVAR"), CancellationToken.None);
         searchResults.ShouldBeEmpty();
     }
+
+    [Test]
+    public async Task UpsertCliente_CuandoAlcanzaLimite10Clientes_DebeLanzarInvalidOperationException()
+    {
+        var handler = new UpsertClienteCommandHandler(_context, _userMock.Object);
+
+        // Registrar 10 clientes previos
+        for (int i = 1; i <= 10; i++)
+        {
+            var c = CatalogoCliente.Crear(_tenantId, "04", $"179001234500{i:D1}", $"CLIENTE {i}");
+            _context.CatalogoClientes.Add(c);
+        }
+        await _context.SaveChangesAsync();
+
+        // Intentar registrar el cliente número 11
+        var command = new UpsertClienteCommand
+        {
+            TipoIdentificacion = "04",
+            Identificacion = "1790012345099",
+            RazonSocial = "CLIENTE ONCE S.A.",
+            Direccion = "Av. 11",
+            CorreoElectronico = "once@test.com"
+        };
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
+            handler.Handle(command, CancellationToken.None));
+
+        ex.Message.ShouldContain("límite máximo permitido de 10 compradores");
+    }
 }
 

@@ -126,6 +126,7 @@ public class Users : IEndpointGroup
     [EndpointSummary("Crear un nuevo usuario por email o username")]
     [EndpointDescription("Permite agregar un usuario especificando email, username o ambos, asignándolo al tenant del usuario autenticado (o tenantId indicado si es Administrador).")]
     public static async Task<Results<Created<UserSummaryDto>, BadRequest<string>, UnauthorizedHttpResult>> CreateUser(
+        UserManager<ApplicationUser> userManager,
         IIdentityService identityService,
         IUser currentUser,
         [FromBody] CreateUserRequest request)
@@ -154,6 +155,15 @@ public class Users : IEndpointGroup
         if (effectiveTenantId == Guid.Empty && !isAdmin)
         {
             return TypedResults.BadRequest("El usuario no tiene una organización (Tenant) asignada.");
+        }
+
+        if (effectiveTenantId != Guid.Empty)
+        {
+            var usuariosExistentes = await userManager.Users.CountAsync(u => u.TenantId == effectiveTenantId);
+            if (usuariosExistentes >= 1)
+            {
+                return TypedResults.BadRequest("Su plan solo permite 1 usuario registrado por cuenta/organización.");
+            }
         }
 
         var email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim().ToLowerInvariant();
