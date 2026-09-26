@@ -111,4 +111,33 @@ public class FacturaTests
 
         factura.ImporteTotal.ShouldBe(575.00m);
     }
+
+    [Test]
+    public void Crear_SinFormaPago_DebeAsignarFormaPagoPorDefecto01()
+    {
+        var detalle = DetalleFactura.Crear("P1", "Item", 1, 10m, 0m, [Impuesto.Crear("2", "4", 15m, 10m)]);
+        var factura = Factura.Crear(
+            _tenantId, 1, "EMISOR", "0957790108001", "001", "001", "000000001", "Quito",
+            DateTime.UtcNow.Date, _clienteIdentificado, [detalle]);
+
+        factura.FormaPago.ShouldBe("01");
+        factura.Plazo.ShouldBeNull();
+        factura.UnidadTiempo.ShouldBeNull();
+    }
+
+    [Test]
+    public void Crear_ConFormaPagoYPlazo_DebeAsignarCorrectamente()
+    {
+        var detalle = DetalleFactura.Crear("P1", "Item", 1, 100m, 0m, [Impuesto.Crear("2", "4", 15m, 100m)]);
+        var factura = Factura.Crear(
+            _tenantId, 1, "EMISOR", "0957790108001", "001", "001", "000000001", "Quito",
+            DateTime.UtcNow.Date, _clienteIdentificado, [detalle],
+            formaPago: "20",
+            plazo: 30,
+            unidadTiempo: "dias");
+
+        factura.FormaPago.ShouldBe("20");
+        factura.Plazo.ShouldBe(30m);
+        factura.UnidadTiempo.ShouldBe("dias");
+    }
 }

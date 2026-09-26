@@ -46,6 +46,17 @@ public class FacturaConfiguration : IEntityTypeConfiguration<Factura>
         builder.Property(f => f.ImporteTotal)
             .HasPrecision(18, 2);
 
+        builder.Property(f => f.FormaPago)
+            .HasMaxLength(2)
+            .IsRequired()
+            .HasDefaultValue("01");
+
+        builder.Property(f => f.Plazo)
+            .HasPrecision(14, 2);
+
+        builder.Property(f => f.UnidadTiempo)
+            .HasMaxLength(20);
+
         builder.HasOne<Emisor>()
             .WithMany()
             .HasForeignKey(f => f.EmisorId)

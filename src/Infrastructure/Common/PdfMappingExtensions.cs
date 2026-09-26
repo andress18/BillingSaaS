@@ -82,6 +82,9 @@ public static class PdfMappingExtensions
             CamposAdicionales = factura.CamposAdicionales?
                 .Select(c => new CampoAdicionalPdfDto(c.Nombre, c.Valor))
                 .ToList() ?? [],
+            FormaPago = factura.FormaPago ?? "01",
+            Plazo = factura.Plazo,
+            UnidadTiempo = factura.UnidadTiempo,
             LogoBase64 = logoBase64,
             RucProveedor = rucProveedor,
             NombreProveedor = nombreProveedor

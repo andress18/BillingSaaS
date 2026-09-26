@@ -16,7 +16,12 @@ public record EmitirFacturaCommand : IRequest<EmitirFacturaResponseDto>
     public List<DetalleDto> Detalles { get; init; } = new();
     public List<CampoAdicionalDto>? CamposAdicionales { get; init; }
     public List<CampoAdicionalDto>? InfoAdicional { get; init; }
+    public string? FormaPago { get; init; } = "01";
+    public decimal? Plazo { get; init; }
+    public string? UnidadTiempo { get; init; }
+    public List<PagoDto>? Pagos { get; init; }
 
+    public record PagoDto(string FormaPago, decimal? Total = null, decimal? Plazo = null, string? UnidadTiempo = null);
     public record CampoAdicionalDto(string Nombre, string Valor);
 
     public record CompradorDto(
@@ -166,6 +171,24 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
             .Select(c => CampoAdicional.Crear(c.Nombre, c.Valor))
             .ToList();
 
+        string formaPago = "01";
+        decimal? plazo = null;
+        string? unidadTiempo = null;
+
+        if (request.Pagos != null && request.Pagos.Count > 0)
+        {
+            var primerPago = request.Pagos[0];
+            formaPago = string.IsNullOrWhiteSpace(primerPago.FormaPago) ? "01" : primerPago.FormaPago;
+            plazo = primerPago.Plazo;
+            unidadTiempo = primerPago.UnidadTiempo;
+        }
+        else if (!string.IsNullOrWhiteSpace(request.FormaPago))
+        {
+            formaPago = request.FormaPago;
+            plazo = request.Plazo;
+            unidadTiempo = request.UnidadTiempo;
+        }
+
         var factura = Factura.Crear(
             tenantId: emisor.TenantId,
             ambiente: emisor.Ambiente,
@@ -181,7 +204,10 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
             emisorId: emisor.Id,
             contribuyenteRimpe: regimenRimpe,
             catalogoClienteId: catalogoClienteId,
-            camposAdicionales: camposAdicionales
+            camposAdicionales: camposAdicionales,
+            formaPago: formaPago,
+            plazo: plazo,
+            unidadTiempo: unidadTiempo
         );
 
         // 5. Generar Clave de Acceso de 49 dígitos con Módulo 11

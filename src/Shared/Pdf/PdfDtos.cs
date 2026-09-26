@@ -63,6 +63,9 @@ public record FacturaPdfRequestDto
     public EmisorPdfDto? Emisor { get; init; }
     public List<DetallePdfDto> Detalles { get; init; } = [];
     public List<CampoAdicionalPdfDto> CamposAdicionales { get; init; } = [];
+    public string FormaPago { get; init; } = "01";
+    public decimal? Plazo { get; init; }
+    public string? UnidadTiempo { get; init; }
     public string? LogoBase64 { get; init; }
     public string? RucProveedor { get; init; }
     public string? NombreProveedor { get; init; }

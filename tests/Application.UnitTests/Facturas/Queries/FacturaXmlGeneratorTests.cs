@@ -202,5 +202,64 @@ public class FacturaXmlGeneratorTests
         // Assert
         xmlStr.ShouldNotContain("<contribuyenteRimpe>");
     }
+
+    [Test]
+    public void GenerarXml_ConFormaPagoPorDefecto_DeberiaGenerarPagos01SinPlazo()
+    {
+        // Arrange
+        var comprador = Comprador.Crear("07", "9999999999999", "CONSUMIDOR FINAL");
+        var detalles = new List<DetalleFactura>
+        {
+            DetalleFactura.Crear("P1", "Item 1", 1, 10m, 0, [Impuesto.Crear("2", "4", 15m, 10m)])
+        };
+
+        var factura = Factura.Crear(
+            Guid.NewGuid(), 1, "EMPRESA", "0957790108001",
+            "001", "001", "000000001", "Matriz",
+            DateTime.UtcNow, comprador, detalles);
+        factura.AsignarClaveAcceso("1609202601095779010800110010010000000011234567813");
+
+        // Act
+        byte[] xmlBytes = _xmlGenerator.GenerarXmlBytes(factura);
+        string xmlStr = Encoding.UTF8.GetString(xmlBytes);
+
+        // Assert
+        xmlStr.ShouldContain("<pagos>");
+        xmlStr.ShouldContain("<formaPago>01</formaPago>");
+        xmlStr.ShouldContain("<total>11.50</total>");
+        xmlStr.ShouldNotContain("<plazo>");
+        xmlStr.ShouldNotContain("<unidadTiempo>");
+    }
+
+    [Test]
+    public void GenerarXml_ConFormaPagoPersonalizadaYPlazo_DeberiaGenerarPagosConPlazoYUnidadTiempo()
+    {
+        // Arrange
+        var comprador = Comprador.Crear("04", "1792060346001", "CLIENTE SA", "Quito");
+        var detalles = new List<DetalleFactura>
+        {
+            DetalleFactura.Crear("P1", "Item Credito", 1, 100m, 0, [Impuesto.Crear("2", "4", 15m, 100m)])
+        };
+
+        var factura = Factura.Crear(
+            Guid.NewGuid(), 1, "EMPRESA", "0957790108001",
+            "001", "001", "000000001", "Matriz",
+            DateTime.UtcNow, comprador, detalles,
+            formaPago: "20",
+            plazo: 30,
+            unidadTiempo: "dias");
+        factura.AsignarClaveAcceso("1609202601095779010800110010010000000011234567813");
+
+        // Act
+        byte[] xmlBytes = _xmlGenerator.GenerarXmlBytes(factura);
+        string xmlStr = Encoding.UTF8.GetString(xmlBytes);
+
+        // Assert
+        xmlStr.ShouldContain("<pagos>");
+        xmlStr.ShouldContain("<formaPago>20</formaPago>");
+        xmlStr.ShouldContain("<total>115.00</total>");
+        xmlStr.ShouldContain("<plazo>30.00</plazo>");
+        xmlStr.ShouldContain("<unidadTiempo>dias</unidadTiempo>");
+    }
 }
 

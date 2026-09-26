@@ -96,6 +96,21 @@ public class ApplicationDbContextInitialiser
                                 await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Facturas ADD COLUMN CamposAdicionales TEXT NULL;");
                             }
 
+                            if (!columnasExistentes.Contains("FormaPago"))
+                            {
+                                await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Facturas ADD COLUMN FormaPago TEXT NOT NULL DEFAULT '01';");
+                            }
+
+                            if (!columnasExistentes.Contains("Plazo"))
+                            {
+                                await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Facturas ADD COLUMN Plazo NUMERIC NULL;");
+                            }
+
+                            if (!columnasExistentes.Contains("UnidadTiempo"))
+                            {
+                                await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Facturas ADD COLUMN UnidadTiempo TEXT NULL;");
+                            }
+
                             // Asegurar CatalogoProductoId en DetalleFactura
                             using var cmdDetalle = connection.CreateCommand();
                             cmdDetalle.CommandText = "PRAGMA table_info(DetalleFactura);";

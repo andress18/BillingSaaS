@@ -33,14 +33,14 @@ public class ConfigurarEmisorCommandValidatorTests
     }
 
     [Test]
-    public void Validar_ConEstablecimientoDistintoDe001_DebeFallar()
+    public void Validar_ConEstablecimientoInvalido_DebeFallar([Values("01", "0001", "ABC", "")] string establecimiento)
     {
         var command = new ConfigurarEmisorCommand
         {
             Ruc = "0957790108001",
             RazonSocial = "EMPRESA PRUEBA S.A.",
             DireccionMatriz = "Quito",
-            CodigoEstablecimiento = "002",
+            CodigoEstablecimiento = establecimiento,
             PuntoEmision = "001",
             Ambiente = 1
         };
@@ -51,7 +51,7 @@ public class ConfigurarEmisorCommandValidatorTests
     }
 
     [Test]
-    public void Validar_ConPuntoEmisionDistintoDe001_DebeFallar()
+    public void Validar_ConPuntoEmisionInvalido_DebeFallar([Values("01", "0001", "XYZ", "")] string puntoEmision)
     {
         var command = new ConfigurarEmisorCommand
         {
@@ -59,7 +59,7 @@ public class ConfigurarEmisorCommandValidatorTests
             RazonSocial = "EMPRESA PRUEBA S.A.",
             DireccionMatriz = "Quito",
             CodigoEstablecimiento = "001",
-            PuntoEmision = "002",
+            PuntoEmision = puntoEmision,
             Ambiente = 1
         };
 
