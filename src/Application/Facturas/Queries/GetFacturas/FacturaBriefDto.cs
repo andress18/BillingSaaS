@@ -21,6 +21,9 @@ public class FacturaBriefDto
     public decimal TotalSinImpuestos { get; init; }
     public decimal TotalDescuento { get; init; }
     public decimal ImporteTotal { get; init; }
+    public string FormaPago { get; init; } = "01";
+    public decimal? Plazo { get; init; }
+    public string? UnidadTiempo { get; init; }
     public string Estado { get; init; } = null!;
     public string? NumeroAutorizacion { get; init; }
     public DateTime? FechaAutorizacion { get; init; }

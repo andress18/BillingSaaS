@@ -89,8 +89,14 @@ public class FacturaXmlGenerator : IFacturaXmlGenerator
                     // 2.1 Bloque PAGOS obligatorio por el SRI v1.1.0
                     new XElement("pagos",
                         new XElement("pago",
-                            new XElement("formaPago", "01"), // 01: Sin utilización del sistema financiero
-                            new XElement("total", factura.ImporteTotal.ToString("0.00", format))
+                            new XElement("formaPago", string.IsNullOrWhiteSpace(factura.FormaPago) ? "01" : factura.FormaPago),
+                            new XElement("total", factura.ImporteTotal.ToString("0.00", format)),
+                            factura.Plazo.HasValue && factura.Plazo.Value > 0
+                                ? new XElement("plazo", factura.Plazo.Value.ToString("0.00", format))
+                                : null,
+                            factura.Plazo.HasValue && factura.Plazo.Value > 0 && !string.IsNullOrWhiteSpace(factura.UnidadTiempo)
+                                ? new XElement("unidadTiempo", factura.UnidadTiempo)
+                                : null
                         )
                     )
                 ),

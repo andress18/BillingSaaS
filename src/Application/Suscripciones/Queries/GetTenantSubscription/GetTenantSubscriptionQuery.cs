@@ -22,6 +22,9 @@ public record TenantSubscriptionDto
     // Consumo del periodo actual
     public bool EsIlimitado { get; init; }
     public int DocumentosEmitidos { get; init; }
+    public int FacturasEmitidas { get; init; }
+    public int NotasCreditoEmitidas { get; init; }
+    public int NotasDebitoEmitidas { get; init; }
     public int? DocumentosMaximos { get; init; }
     public int? DocumentosDisponibles { get; init; }
     public decimal PorcentajeUso { get; init; }
@@ -86,6 +89,12 @@ public class GetTenantSubscriptionQueryHandler : IRequestHandler<GetTenantSubscr
         var emitidos = await _context.Facturas
             .CountAsync(f => f.TenantId == tenantId && f.FechaEmision >= inicioCiclo && f.Estado != "DEVUELTA", cancellationToken);
 
+        var notasCreditoEmitidas = await _context.NotasCredito
+            .CountAsync(nc => nc.TenantId == tenantId && nc.FechaEmision >= inicioCiclo && nc.Estado != "DEVUELTA", cancellationToken);
+
+        var notasDebitoEmitidas = await _context.NotasDebito
+            .CountAsync(nd => nd.TenantId == tenantId && nd.FechaEmision >= inicioCiclo && nd.Estado != "DEVUELTA", cancellationToken);
+
         var establecimientosRegistrados = await _context.Emisores
             .Where(e => e.TenantId == tenantId)
             .Select(e => e.CodigoEstablecimiento)
@@ -119,6 +128,9 @@ public class GetTenantSubscriptionQueryHandler : IRequestHandler<GetTenantSubscr
 
             EsIlimitado = esIlimitado,
             DocumentosEmitidos = emitidos,
+            FacturasEmitidas = emitidos,
+            NotasCreditoEmitidas = notasCreditoEmitidas,
+            NotasDebitoEmitidas = notasDebitoEmitidas,
             DocumentosMaximos = limite,
             DocumentosDisponibles = disponibles,
             PorcentajeUso = porcentajeUso,

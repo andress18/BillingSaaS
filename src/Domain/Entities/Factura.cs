@@ -107,6 +107,13 @@ public class Factura : BaseAuditableEntity
     public decimal ImporteTotal { get; private set; }
 
     // ==========================================
+    // 2.1 FORMA DE PAGO SRI (Tabla 24)
+    // ==========================================
+    public string FormaPago { get; private set; } = "01"; // 01: Sin utilización del sistema financiero
+    public decimal? Plazo { get; private set; }
+    public string? UnidadTiempo { get; private set; } // dias, meses, anios
+
+    // ==========================================
     // 3. DETALLES (Líneas de la factura)
     // ==========================================
     public Comprador Cliente { get; private init; } = null!;
@@ -131,8 +138,12 @@ public class Factura : BaseAuditableEntity
         List<DetalleFactura> detalles, int emisorId = 0,
         string? contribuyenteRimpe = null,
         Guid? catalogoClienteId = null,
-        List<CampoAdicional>? camposAdicionales = null)
+        List<CampoAdicional>? camposAdicionales = null,
+        string? formaPago = "01",
+        decimal? plazo = null,
+        string? unidadTiempo = null)
     {
+        var codigoFormaPago = string.IsNullOrWhiteSpace(formaPago) ? "01" : formaPago.Trim();
         var factura = new Factura
         {
             TenantId = tenantId,
@@ -150,6 +161,9 @@ public class Factura : BaseAuditableEntity
             FechaEmision = fechaEmision,
             Estado = "CREADA",
             CatalogoClienteId = catalogoClienteId,
+            FormaPago = codigoFormaPago,
+            Plazo = plazo > 0 ? plazo : null,
+            UnidadTiempo = plazo > 0 ? (string.IsNullOrWhiteSpace(unidadTiempo) ? "dias" : unidadTiempo.Trim().ToLowerInvariant()) : null,
         
             // Delegamos toda la información del adquirente al objeto compuesto
             Cliente = cliente,

@@ -20,15 +20,17 @@ public class ConfigurarEmisorCommandValidator : AbstractValidator<ConfigurarEmis
             .MaximumLength(300)
             .WithMessage("La dirección matriz es obligatoria y no puede superar 300 caracteres.");
 
-        // RuleFor(x => x.CodigoEstablecimiento)
-        //     .NotEmpty()
-        //     .Equal("001")
-        //     .WithMessage("El plan solo permite el establecimiento principal '001'.");
+        RuleFor(x => x.CodigoEstablecimiento)
+            .NotEmpty()
+            .Length(3)
+            .Matches("^[0-9]{3}$")
+            .WithMessage("El código de establecimiento debe contener exactamente 3 dígitos numéricos.");
 
-        // RuleFor(x => x.PuntoEmision)
-        //     .NotEmpty()
-        //     .Equal("001")
-        //     .WithMessage("El plan solo permite el punto de emisión '001'.");
+        RuleFor(x => x.PuntoEmision)
+            .NotEmpty()
+            .Length(3)
+            .Matches("^[0-9]{3}$")
+            .WithMessage("El punto de emisión debe contener exactamente 3 dígitos numéricos.");
 
         RuleFor(x => x.Ambiente)
             .Must(a => a is 1 or 2)

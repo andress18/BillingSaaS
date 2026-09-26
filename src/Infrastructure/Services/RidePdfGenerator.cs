@@ -5,6 +5,7 @@ using System.Text;
 using Barcoder.Code128;
 using Barcoder.Renderer.Svg;
 using BillingSaaS.Application.Common.Interfaces;
+using BillingSaaS.Domain.Constants;
 using BillingSaaS.Domain.Entities;
 using BillingSaaS.Infrastructure.Common;
 using BillingSaaS.Shared.Pdf;
@@ -398,7 +399,14 @@ public class RidePdfGenerator : IRidePdfGenerator
                                     h.Cell().Background(Colors.Grey.Lighten3).Border(0.5f).BorderColor(Colors.Grey.Medium).Padding(2).AlignRight().Text("Total").Bold().FontSize(7.5f);
                                 });
 
-                                pagoTable.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(2).Text("OTROS CON UTILIZACION DEL SISTEMA FINANCIERO").FontSize(7.5f);
+                                string descPago = FormasPagoSRI.ObtenerDescripcion(factura.FormaPago);
+                                if (factura.Plazo.HasValue && factura.Plazo.Value > 0)
+                                {
+                                    var unidad = string.IsNullOrWhiteSpace(factura.UnidadTiempo) ? "días" : factura.UnidadTiempo;
+                                    descPago += $" (Plazo: {factura.Plazo.Value:0.##} {unidad})";
+                                }
+
+                                pagoTable.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(2).Text(descPago).FontSize(7.5f);
                                 pagoTable.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(2).AlignRight().Text($"${factura.ImporteTotal:N2}").FontSize(7.5f);
                             });
                         });
