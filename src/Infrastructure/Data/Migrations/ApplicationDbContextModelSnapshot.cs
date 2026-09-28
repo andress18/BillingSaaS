@@ -465,6 +465,13 @@ namespace BillingSaaS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("FechaEmision")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("FormaPago")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)")
+                        .HasDefaultValue("01");
+
                     b.Property<string>("IdentificacionComprador")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -486,6 +493,10 @@ namespace BillingSaaS.Infrastructure.Data.Migrations
                     b.Property<string>("NumeroAutorizacion")
                         .HasMaxLength(49)
                         .HasColumnType("nvarchar(49)");
+
+                    b.Property<decimal?>("Plazo")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("decimal(14,2)");
 
                     b.Property<string>("PuntoEmision")
                         .IsRequired()
@@ -526,6 +537,10 @@ namespace BillingSaaS.Infrastructure.Data.Migrations
                     b.Property<decimal>("TotalSinImpuestos")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("UnidadTiempo")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("XmlFirmado")
                         .HasColumnType("nvarchar(max)");
