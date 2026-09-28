@@ -64,8 +64,12 @@ public class RidePdfGenerator : IRidePdfGenerator
             .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "5" || i.Tarifa == 5m))
             .Sum(i => i.BaseImponible);
 
-        var subtotal0 = todosImpuestos
-            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "0" || i.Tarifa == 0m))
+        var subtotal12 = todosImpuestos
+            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "2" || i.Tarifa == 12m))
+            .Sum(i => i.BaseImponible);
+
+        var subtotal8 = todosImpuestos
+            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "8" || i.Tarifa == 8m))
             .Sum(i => i.BaseImponible);
 
         var subtotalNoObjeto = todosImpuestos
@@ -76,8 +80,12 @@ public class RidePdfGenerator : IRidePdfGenerator
             .Where(i => i.Codigo == "2" && i.CodigoPorcentaje == "7")
             .Sum(i => i.BaseImponible);
 
+        var subtotal0 = todosImpuestos
+            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "0" || (i.Tarifa == 0m && i.CodigoPorcentaje != "6" && i.CodigoPorcentaje != "7")))
+            .Sum(i => i.BaseImponible);
+
         // Si no se desglosaron impuestos explícitos, garantizar coherencia con TotalSinImpuestos
-        if (subtotal15 == 0 && subtotal5 == 0 && subtotal0 == 0 && subtotalNoObjeto == 0 && subtotalExento == 0 && factura.TotalSinImpuestos > 0)
+        if (subtotal15 == 0 && subtotal5 == 0 && subtotal12 == 0 && subtotal8 == 0 && subtotal0 == 0 && subtotalNoObjeto == 0 && subtotalExento == 0 && factura.TotalSinImpuestos > 0)
         {
             subtotal15 = factura.TotalSinImpuestos;
         }
@@ -90,7 +98,15 @@ public class RidePdfGenerator : IRidePdfGenerator
             .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "5" || i.Tarifa == 5m))
             .Sum(i => i.Valor);
 
-        if (iva15 == 0 && iva5 == 0 && (factura.ImporteTotal - factura.TotalSinImpuestos) > 0)
+        var iva12 = todosImpuestos
+            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "2" || i.Tarifa == 12m))
+            .Sum(i => i.Valor);
+
+        var iva8 = todosImpuestos
+            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "8" || i.Tarifa == 8m))
+            .Sum(i => i.Valor);
+
+        if (iva15 == 0 && iva5 == 0 && iva12 == 0 && iva8 == 0 && (factura.ImporteTotal - factura.TotalSinImpuestos) > 0)
         {
             iva15 = factura.ImporteTotal - factura.TotalSinImpuestos;
         }
@@ -432,6 +448,8 @@ public class RidePdfGenerator : IRidePdfGenerator
                             }
 
                             AgregarFilaTotal("SUBTOTAL 15%", subtotal15);
+                            if (subtotal12 > 0) AgregarFilaTotal("SUBTOTAL 12%", subtotal12);
+                            if (subtotal8 > 0) AgregarFilaTotal("SUBTOTAL 8%", subtotal8);
                             AgregarFilaTotal("SUBTOTAL 5%", subtotal5);
                             AgregarFilaTotal("SUBTOTAL 0%", subtotal0);
                             AgregarFilaTotal("SUBTOTAL NO OBJETO DE IVA", subtotalNoObjeto);
@@ -439,6 +457,8 @@ public class RidePdfGenerator : IRidePdfGenerator
                             AgregarFilaTotal("SUBTOTAL SIN IMPUESTOS", factura.TotalSinImpuestos);
                             AgregarFilaTotal("TOTAL DESCUENTO", factura.TotalDescuento);
                             AgregarFilaTotal("IVA 15%", iva15);
+                            if (iva12 > 0) AgregarFilaTotal("IVA 12%", iva12);
+                            if (iva8 > 0) AgregarFilaTotal("IVA 8%", iva8);
                             AgregarFilaTotal("IVA 5%", iva5);
                             AgregarFilaTotal("PROPINA", 0.00m);
                             AgregarFilaTotal("IMPORTE TOTAL", factura.ImporteTotal, bold: true);
@@ -485,11 +505,27 @@ public class RidePdfGenerator : IRidePdfGenerator
             .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "5" || i.Tarifa == 5m))
             .Sum(i => i.BaseImponible);
 
-        var subtotal0 = todosImpuestos
-            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "0" || i.Tarifa == 0m))
+        var subtotal12 = todosImpuestos
+            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "2" || i.Tarifa == 12m))
             .Sum(i => i.BaseImponible);
 
-        if (subtotal15 == 0 && subtotal5 == 0 && subtotal0 == 0 && notaDebito.TotalSinImpuestos > 0)
+        var subtotal8 = todosImpuestos
+            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "8" || i.Tarifa == 8m))
+            .Sum(i => i.BaseImponible);
+
+        var subtotalNoObjeto = todosImpuestos
+            .Where(i => i.Codigo == "2" && i.CodigoPorcentaje == "6")
+            .Sum(i => i.BaseImponible);
+
+        var subtotalExento = todosImpuestos
+            .Where(i => i.Codigo == "2" && i.CodigoPorcentaje == "7")
+            .Sum(i => i.BaseImponible);
+
+        var subtotal0 = todosImpuestos
+            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "0" || (i.Tarifa == 0m && i.CodigoPorcentaje != "6" && i.CodigoPorcentaje != "7")))
+            .Sum(i => i.BaseImponible);
+
+        if (subtotal15 == 0 && subtotal5 == 0 && subtotal12 == 0 && subtotal8 == 0 && subtotal0 == 0 && subtotalNoObjeto == 0 && subtotalExento == 0 && notaDebito.TotalSinImpuestos > 0)
         {
             subtotal15 = notaDebito.TotalSinImpuestos;
         }
@@ -502,7 +538,15 @@ public class RidePdfGenerator : IRidePdfGenerator
             .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "5" || i.Tarifa == 5m))
             .Sum(i => i.Valor);
 
-        if (iva15 == 0 && iva5 == 0 && (notaDebito.ValorTotal - notaDebito.TotalSinImpuestos) > 0)
+        var iva12 = todosImpuestos
+            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "2" || i.Tarifa == 12m))
+            .Sum(i => i.Valor);
+
+        var iva8 = todosImpuestos
+            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "8" || i.Tarifa == 8m))
+            .Sum(i => i.Valor);
+
+        if (iva15 == 0 && iva5 == 0 && iva12 == 0 && iva8 == 0 && (notaDebito.ValorTotal - notaDebito.TotalSinImpuestos) > 0)
         {
             iva15 = notaDebito.ValorTotal - notaDebito.TotalSinImpuestos;
         }
@@ -794,10 +838,16 @@ public class RidePdfGenerator : IRidePdfGenerator
                             }
 
                             AgregarFilaTotal("SUBTOTAL 15%", subtotal15);
+                            if (subtotal12 > 0) AgregarFilaTotal("SUBTOTAL 12%", subtotal12);
+                            if (subtotal8 > 0) AgregarFilaTotal("SUBTOTAL 8%", subtotal8);
                             AgregarFilaTotal("SUBTOTAL 5%", subtotal5);
                             AgregarFilaTotal("SUBTOTAL 0%", subtotal0);
+                            if (subtotalNoObjeto > 0) AgregarFilaTotal("SUBTOTAL NO OBJETO DE IVA", subtotalNoObjeto);
+                            if (subtotalExento > 0) AgregarFilaTotal("SUBTOTAL EXENTO DE IVA", subtotalExento);
                             AgregarFilaTotal("SUBTOTAL SIN IMPUESTOS", notaDebito.TotalSinImpuestos);
                             AgregarFilaTotal("IVA 15%", iva15);
+                            if (iva12 > 0) AgregarFilaTotal("IVA 12%", iva12);
+                            if (iva8 > 0) AgregarFilaTotal("IVA 8%", iva8);
                             AgregarFilaTotal("IVA 5%", iva5);
                             AgregarFilaTotal("VALOR TOTAL", notaDebito.ValorTotal, bold: true);
                         });
@@ -843,11 +893,27 @@ public class RidePdfGenerator : IRidePdfGenerator
             .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "5" || i.Tarifa == 5m))
             .Sum(i => i.BaseImponible);
 
-        var subtotal0 = todosImpuestos
-            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "0" || i.Tarifa == 0m))
+        var subtotal12 = todosImpuestos
+            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "2" || i.Tarifa == 12m))
             .Sum(i => i.BaseImponible);
 
-        if (subtotal15 == 0 && subtotal5 == 0 && subtotal0 == 0 && notaCredito.TotalSinImpuestos > 0)
+        var subtotal8 = todosImpuestos
+            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "8" || i.Tarifa == 8m))
+            .Sum(i => i.BaseImponible);
+
+        var subtotalNoObjeto = todosImpuestos
+            .Where(i => i.Codigo == "2" && i.CodigoPorcentaje == "6")
+            .Sum(i => i.BaseImponible);
+
+        var subtotalExento = todosImpuestos
+            .Where(i => i.Codigo == "2" && i.CodigoPorcentaje == "7")
+            .Sum(i => i.BaseImponible);
+
+        var subtotal0 = todosImpuestos
+            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "0" || (i.Tarifa == 0m && i.CodigoPorcentaje != "6" && i.CodigoPorcentaje != "7")))
+            .Sum(i => i.BaseImponible);
+
+        if (subtotal15 == 0 && subtotal5 == 0 && subtotal12 == 0 && subtotal8 == 0 && subtotal0 == 0 && subtotalNoObjeto == 0 && subtotalExento == 0 && notaCredito.TotalSinImpuestos > 0)
         {
             subtotal15 = notaCredito.TotalSinImpuestos;
         }
@@ -860,7 +926,15 @@ public class RidePdfGenerator : IRidePdfGenerator
             .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "5" || i.Tarifa == 5m))
             .Sum(i => i.Valor);
 
-        if (iva15 == 0 && iva5 == 0 && (notaCredito.ValorModificacion - notaCredito.TotalSinImpuestos) > 0)
+        var iva12 = todosImpuestos
+            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "2" || i.Tarifa == 12m))
+            .Sum(i => i.Valor);
+
+        var iva8 = todosImpuestos
+            .Where(i => i.Codigo == "2" && (i.CodigoPorcentaje == "8" || i.Tarifa == 8m))
+            .Sum(i => i.Valor);
+
+        if (iva15 == 0 && iva5 == 0 && iva12 == 0 && iva8 == 0 && (notaCredito.ValorModificacion - notaCredito.TotalSinImpuestos) > 0)
         {
             iva15 = notaCredito.ValorModificacion - notaCredito.TotalSinImpuestos;
         }
@@ -1077,11 +1151,17 @@ public class RidePdfGenerator : IRidePdfGenerator
                             }
 
                             AgregarFilaTotal("SUBTOTAL 15%", subtotal15);
+                            if (subtotal12 > 0) AgregarFilaTotal("SUBTOTAL 12%", subtotal12);
+                            if (subtotal8 > 0) AgregarFilaTotal("SUBTOTAL 8%", subtotal8);
                             AgregarFilaTotal("SUBTOTAL 5%", subtotal5);
                             AgregarFilaTotal("SUBTOTAL 0%", subtotal0);
+                            if (subtotalNoObjeto > 0) AgregarFilaTotal("SUBTOTAL NO OBJETO DE IVA", subtotalNoObjeto);
+                            if (subtotalExento > 0) AgregarFilaTotal("SUBTOTAL EXENTO DE IVA", subtotalExento);
                             AgregarFilaTotal("SUBTOTAL SIN IMPUESTOS", notaCredito.TotalSinImpuestos);
                             AgregarFilaTotal("TOTAL DESCUENTO", notaCredito.TotalDescuento);
                             AgregarFilaTotal("IVA 15%", iva15);
+                            if (iva12 > 0) AgregarFilaTotal("IVA 12%", iva12);
+                            if (iva8 > 0) AgregarFilaTotal("IVA 8%", iva8);
                             AgregarFilaTotal("IVA 5%", iva5);
                             AgregarFilaTotal("VALOR TOTAL", notaCredito.ValorModificacion, bold: true);
                         });
