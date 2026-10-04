@@ -39,10 +39,12 @@ public class GetFacturaPdfQueryHandler : IRequestHandler<GetFacturaPdfQuery, Fac
             throw new UnauthorizedAccessException("No tiene autorización para acceder a esta factura.");
         }
 
-        var emisor = await _context.Emisores
-            .FirstOrDefaultAsync(e => e.Id == factura.EmisorId, cancellationToken);
+        var emisor = (factura.EmisorId > 0
+            ? await _context.Emisores.FirstOrDefaultAsync(e => e.Id == factura.EmisorId, cancellationToken)
+            : null)
+            ?? await _context.Emisores.FirstOrDefaultAsync(e => e.TenantId == factura.TenantId, cancellationToken);
 
-        var pdfBytes = _pdfGenerator.GenerarFacturaRide(factura, emisor);
+        var pdfBytes = _pdfGenerator.GenerarFacturaRide(factura, emisor, emisor?.Logo);
         var fileName = $"FACTURA_{factura.Establecimiento}_{factura.PuntoEmision}_{factura.Secuencial}.pdf";
 
         return new FacturaPdfFileDto(pdfBytes, "application/pdf", fileName);

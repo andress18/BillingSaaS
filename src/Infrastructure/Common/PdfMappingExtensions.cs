@@ -85,7 +85,7 @@ public static class PdfMappingExtensions
             FormaPago = factura.FormaPago ?? "01",
             Plazo = factura.Plazo,
             UnidadTiempo = factura.UnidadTiempo,
-            LogoBase64 = logoBase64,
+            LogoBase64 = !string.IsNullOrWhiteSpace(logoBase64) ? logoBase64 : emisor?.Logo,
             RucProveedor = rucProveedor,
             NombreProveedor = nombreProveedor
         };
@@ -135,7 +135,7 @@ public static class PdfMappingExtensions
                 }).ToList()
             }).ToList(),
             CamposAdicionales = [],
-            LogoBase64 = logoBase64,
+            LogoBase64 = !string.IsNullOrWhiteSpace(logoBase64) ? logoBase64 : emisor?.Logo,
             RucProveedor = rucProveedor,
             NombreProveedor = nombreProveedor
         };
@@ -176,7 +176,7 @@ public static class PdfMappingExtensions
             }).ToList(),
             Pagos = notaDebito.Pagos.Select(p => new PagoDebitoPdfDto(p.FormaPago, p.Total, p.Plazo, p.UnidadTiempo)).ToList(),
             CamposAdicionales = [],
-            LogoBase64 = logoBase64,
+            LogoBase64 = !string.IsNullOrWhiteSpace(logoBase64) ? logoBase64 : emisor?.Logo,
             RucProveedor = rucProveedor,
             NombreProveedor = nombreProveedor
         };

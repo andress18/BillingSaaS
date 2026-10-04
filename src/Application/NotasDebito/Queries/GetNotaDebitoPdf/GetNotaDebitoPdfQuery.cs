@@ -42,10 +42,12 @@ public class GetNotaDebitoPdfQueryHandler : IRequestHandler<GetNotaDebitoPdfQuer
             throw new UnauthorizedAccessException("No tiene autorización para acceder a esta nota de débito.");
         }
 
-        var emisor = await _context.Emisores
-            .FirstOrDefaultAsync(e => e.Id == notaDebito.EmisorId, cancellationToken);
+        var emisor = (notaDebito.EmisorId > 0
+            ? await _context.Emisores.FirstOrDefaultAsync(e => e.Id == notaDebito.EmisorId, cancellationToken)
+            : null)
+            ?? await _context.Emisores.FirstOrDefaultAsync(e => e.TenantId == notaDebito.TenantId, cancellationToken);
 
-        var pdfBytes = _pdfGenerator.GenerarNotaDebitoRide(notaDebito, emisor);
+        var pdfBytes = _pdfGenerator.GenerarNotaDebitoRide(notaDebito, emisor, emisor?.Logo);
         var fileName = $"NOTA_DEBITO_{notaDebito.Establecimiento}_{notaDebito.PuntoEmision}_{notaDebito.Secuencial}.pdf";
 
         return new NotaDebitoPdfFileDto(pdfBytes, "application/pdf", fileName);

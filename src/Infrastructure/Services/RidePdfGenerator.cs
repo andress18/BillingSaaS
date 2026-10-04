@@ -46,7 +46,8 @@ public class RidePdfGenerator : IRidePdfGenerator
     public byte[] GenerarFacturaRide(Factura factura, Emisor? emisor, string? logoBase64 = null)
     {
         ArgumentNullException.ThrowIfNull(factura);
-        return GenerarFacturaRide(factura.ToPdfRequest(emisor, logoBase64, _rucProveedor, _nombreProveedor));
+        var logoEfectivo = !string.IsNullOrWhiteSpace(logoBase64) ? logoBase64 : emisor?.Logo;
+        return GenerarFacturaRide(factura.ToPdfRequest(emisor, logoEfectivo, _rucProveedor, _nombreProveedor));
     }
 
     public byte[] GenerarFacturaRide(FacturaPdfRequestDto factura)
@@ -123,6 +124,7 @@ public class RidePdfGenerator : IRidePdfGenerator
             try
             {
                 var cleanBase64 = logoBase64.Contains(',') ? logoBase64.Split(',')[1] : logoBase64;
+                cleanBase64 = cleanBase64.Trim().Replace(" ", "").Replace("\r", "").Replace("\n", "");
                 logoBytes = Convert.FromBase64String(cleanBase64);
             }
             catch
@@ -488,7 +490,8 @@ public class RidePdfGenerator : IRidePdfGenerator
     public byte[] GenerarNotaDebitoRide(NotaDebito notaDebito, Emisor? emisor, string? logoBase64 = null)
     {
         ArgumentNullException.ThrowIfNull(notaDebito);
-        return GenerarNotaDebitoRide(notaDebito.ToPdfRequest(emisor, logoBase64, _rucProveedor, _nombreProveedor));
+        var logoEfectivo = !string.IsNullOrWhiteSpace(logoBase64) ? logoBase64 : emisor?.Logo;
+        return GenerarNotaDebitoRide(notaDebito.ToPdfRequest(emisor, logoEfectivo, _rucProveedor, _nombreProveedor));
     }
 
     public byte[] GenerarNotaDebitoRide(NotaDebitoPdfRequestDto notaDebito)
@@ -561,6 +564,7 @@ public class RidePdfGenerator : IRidePdfGenerator
             try
             {
                 var cleanBase64 = logoBase64.Contains(',') ? logoBase64.Split(',')[1] : logoBase64;
+                cleanBase64 = cleanBase64.Trim().Replace(" ", "").Replace("\r", "").Replace("\n", "");
                 logoBytes = Convert.FromBase64String(cleanBase64);
             }
             catch
@@ -875,7 +879,8 @@ public class RidePdfGenerator : IRidePdfGenerator
     public byte[] GenerarNotaCreditoRide(NotaCredito notaCredito, Emisor? emisor, string? logoBase64 = null)
     {
         ArgumentNullException.ThrowIfNull(notaCredito);
-        return GenerarNotaCreditoRide(notaCredito.ToPdfRequest(emisor, logoBase64, _rucProveedor, _nombreProveedor));
+        var logoEfectivo = !string.IsNullOrWhiteSpace(logoBase64) ? logoBase64 : emisor?.Logo;
+        return GenerarNotaCreditoRide(notaCredito.ToPdfRequest(emisor, logoEfectivo, _rucProveedor, _nombreProveedor));
     }
 
     public byte[] GenerarNotaCreditoRide(NotaCreditoPdfRequestDto notaCredito)
@@ -951,6 +956,7 @@ public class RidePdfGenerator : IRidePdfGenerator
             try
             {
                 var cleanBase64 = logoBase64.Contains(',') ? logoBase64.Split(',')[1] : logoBase64;
+                cleanBase64 = cleanBase64.Trim().Replace(" ", "").Replace("\r", "").Replace("\n", "");
                 logoBytes = Convert.FromBase64String(cleanBase64);
             }
             catch
