@@ -169,6 +169,41 @@ public class SubscriptionValidationServiceTests
     }
 
     [Test]
+    public async Task ValidarEmisionAsync_EstablecimientoDistintoA001_PlanPermite1Establecimiento_DebePermitirEmision()
+    {
+        var tenantId = Guid.NewGuid();
+        // Plan solo permite 1 establecimiento
+        var plan = Plan.Crear("MIGRACION_SISTEMA", "Migración", "Plan Básico", 3m, 20m, null, 100, 1, "01,04,05", true);
+        _context.Planes.Add(plan);
+        await _context.SaveChangesAsync();
+
+        var sub = TenantSubscription.Crear(
+            tenantId,
+            plan.Id,
+            _now.AddDays(-5),
+            _now.AddDays(25),
+            "ANUAL"
+        );
+        _context.Suscripciones.Add(sub);
+
+        // El cliente opera con sucursal 002 como su único establecimiento activo
+        var emisor = Emisor.Crear(
+            tenantId,
+            "1792987654001",
+            "Mi Sucursal",
+            "Dirección Sucursal 2",
+            codigoEstablecimiento: "002",
+            puntoEmision: "003"
+        );
+        _context.Emisores.Add(emisor);
+        await _context.SaveChangesAsync();
+
+        // No debe lanzar excepción aunque el código de establecimiento sea "002"
+        await Should.NotThrowAsync(() =>
+            _service.ValidarEmisionAsync(tenantId, "01", "002", CancellationToken.None));
+    }
+
+    [Test]
     public async Task ValidarEmisionAsync_LimiteDocumentosAlcanzado_DebeLanzarSubscriptionLimitExceededException()
     {
         var tenantId = Guid.NewGuid();
