@@ -85,14 +85,52 @@ public class Emisor : BaseAuditableEntity
             ObligadoContabilidad = obligadoContabilidad,
             RegimenRimpe = Constants.RegimenRimpeTipos.Normalizar(regimenRimpe),
             ContribuyenteEspecial = contribuyenteEspecial,
-            Logo = logo,
+            Logo = NormalizarLogo(logo),
             Activo = true
         };
     }
 
     public void ActualizarLogo(string? logo)
     {
-        Logo = logo;
+        Logo = NormalizarLogo(logo);
+    }
+
+    public static string? NormalizarLogo(string? logo)
+    {
+        if (string.IsNullOrWhiteSpace(logo))
+            return null;
+
+        var trimmed = logo.Trim();
+        if (trimmed.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase))
+            return trimmed;
+
+        if (trimmed.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+            return trimmed;
+
+        // Detectar tipo MIME según los primeros caracteres del Base64
+        string mimeType = "image/jpeg";
+        if (trimmed.StartsWith("/9j/", StringComparison.OrdinalIgnoreCase))
+        {
+            mimeType = "image/jpeg";
+        }
+        else if (trimmed.StartsWith("iVBORw0KGgo", StringComparison.OrdinalIgnoreCase))
+        {
+            mimeType = "image/png";
+        }
+        else if (trimmed.StartsWith("R0lGOD", StringComparison.OrdinalIgnoreCase))
+        {
+            mimeType = "image/gif";
+        }
+        else if (trimmed.StartsWith("UklGR", StringComparison.OrdinalIgnoreCase))
+        {
+            mimeType = "image/webp";
+        }
+        else if (trimmed.StartsWith("PHN2Zw", StringComparison.OrdinalIgnoreCase) || trimmed.StartsWith("PD94b", StringComparison.OrdinalIgnoreCase))
+        {
+            mimeType = "image/svg+xml";
+        }
+
+        return $"data:{mimeType};base64,{trimmed}";
     }
 
     public void ConfigurarCertificado(

@@ -1,0 +1,72 @@
+[
+  {
+    "PartnerId": "22222222-2222-2222-2222-222222222222",
+    "NombreOrganizacion": "Comercializadora y Distribuidora Los Andes Cía. Ltda.",
+    "Username": "losandes@example.com",
+    "Email": "losandes@example.com",
+    "PasswordPlana": "PasswordAntiguo123!",
+    "PlanCodigo": "MIGRACION_SISTEMA",
+    "FechaInicioPlan": "2025-01-01T00:00:00Z",
+    "FechaFinPlan": "2026-12-31T23:59:59Z",
+    "Frecuencia": "ANUAL",
+    "DiasGracia": 3,
+    "CertificadoBase64": "",
+    "PasswordCertificado": "ClaveFirma2026",
+    "Ruc": "1792987654001",
+    "RazonSocial": "Comercializadora y Distribuidora Los Andes Cía. Ltda.",
+    "NombreComercial": "Distribuidora Los Andes",
+    "DireccionMatriz": "Av. Amazonas N24-150 y Colón, Quito",
+    "DireccionEstablecimiento": "Av. Amazonas N24-150 y Colón, Quito",
+    "CodigoEstablecimiento": "001",
+    "PuntoEmision": "001",
+    "Ambiente": 2,
+    "ObligadoContabilidad": true,
+    "RegimenRimpe": "CONTRIBUYENTE RÉGIMEN GENERAL",
+    "ContribuyenteEspecial": null,
+    "UltimoSecuencialFactura": 150,
+    "Facturas": [
+      {
+        "ClaveAcceso": "0103202601179298765400120010010000001501234567818",
+        "Secuencial": "000000150",
+        "Establecimiento": "001",
+        "PuntoEmision": "001",
+        "FechaEmision": "2026-03-01T10:30:00Z",
+        "Estado": "AUTORIZADO",
+        "NumeroAutorizacion": "0103202601179298765400120010010000001501234567818",
+        "FechaAutorizacion": "2026-03-01T10:31:00Z",
+        "MensajeErrorSri": null,
+        "XmlOriginal": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><factura id=\"comprobante\" version=\"1.1.0\"><infoTributaria><ambiente>2</ambiente><tipoEmision>1</tipoEmision><razonSocial>Comercializadora y Distribuidora Los Andes Cía. Ltda.</razonSocial><nombreComercial>Distribuidora Los Andes</nombreComercial><ruc>1792987654001</ruc><claveAcceso>0103202601179298765400120010010000001501234567818</claveAcceso><codDoc>01</codDoc><estab>001</estab><ptoEmi>001</ptoEmi><secuencial>000000150</secuencial><dirMatriz>Av. Amazonas N24-150 y Colón, Quito</dirMatriz></infoTributaria><infoFactura><fechaEmision>01/03/2026</fechaEmision><dirEstablecimiento>Av. Amazonas N24-150 y Colón, Quito</dirEstablecimiento><obligadoContabilidad>SI</obligadoContabilidad><tipoIdentificacionComprador>04</tipoIdentificacionComprador><razonSocialComprador>CORPORACION FAVORITA C.A.</razonSocialComprador><identificacionComprador>1790016919001</identificacionComprador><totalSinImpuestos>100.00</totalSinImpuestos><totalDescuento>0.00</totalDescuento><totalConImpuestos><totalImpuesto><codigo>2</codigo><codigoPorcentaje>4</codigoPorcentaje><baseImponible>100.00</baseImponible><valor>15.00</valor></totalImpuesto></totalConImpuestos><importeTotal>115.00</importeTotal><moneda>DOLAR</moneda><pagos><pago><formaPago>01</formaPago><total>115.00</total></pago></pagos></infoFactura><detalles><detalle><codigoPrincipal>PROD-001</codigoPrincipal><descripcion>Caja de Suministros Industriales</descripcion><cantidad>2.00</cantidad><precioUnitario>50.00</precioUnitario><descuento>0.00</descuento><precioTotalSinImpuesto>100.00</precioTotalSinImpuesto><impuestos><impuesto><codigo>2</codigo><codigoPorcentaje>4</codigoPorcentaje><tarifa>15.00</tarifa><baseImponible>100.00</baseImponible><valor>15.00</valor></impuesto></impuestos></detalle></detalles><infoAdicional><campoAdicional nombre=\"Email\">compras@favorita.com</campoAdicional><campoAdicional nombre=\"Direccion\">Av. General Enríquez, Sangolquí</campoAdicional></infoAdicional></factura>",
+        "XmlFirmado": null,
+        "TotalSinImpuestos": 100.00,
+        "TotalDescuento": 0.00,
+        "ImporteTotal": 115.00,
+        "FormaPago": "01",
+        "Comprador": {
+          "TipoIdentificacion": "04",
+          "Identificacion": "1790016919001",
+          "RazonSocial": "CORPORACION FAVORITA C.A.",
+          "Direccion": "Av. General Enríquez, Sangolquí",
+          "CorreoElectronico": "compras@favorita.com"
+        },
+        "Detalles": [
+          {
+            "CodigoPrincipal": "PROD-001",
+            "Descripcion": "Caja de Suministros Industriales",
+            "Cantidad": 2.0,
+            "PrecioUnitario": 50.0,
+            "Descuento": 0.0,
+            "Impuestos": [
+              {
+                "Codigo": "2",
+                "CodigoPorcentaje": "4",
+                "Tarifa": 15.0,
+                "BaseImponible": 100.0,
+                "Valor": 15.0
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]
