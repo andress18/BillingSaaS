@@ -49,10 +49,21 @@ public class SubscriptionValidationService : ISubscriptionValidationService
             throw new DocumentTypeNotAllowedException(codDoc, suscripcion.Plan.Nombre);
         }
 
-        // 3. Validar establecimiento permitido
-        if (int.TryParse(codigoEstablecimiento, out int numEstablecimiento) && numEstablecimiento > suscripcion.Plan.MaxEstablecimientos)
+        // 3. Validar establecimiento permitido según cuota del plan (cantidad de establecimientos distintos)
+        var estabNormalizado = string.IsNullOrWhiteSpace(codigoEstablecimiento) ? "001" : codigoEstablecimiento.Trim();
+        var establecimientosExistentes = await _context.Emisores
+            .Where(e => e.TenantId == tenantId && e.Activo)
+            .Select(e => e.CodigoEstablecimiento)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        int totalEstablecimientos = establecimientosExistentes.Contains(estabNormalizado, StringComparer.OrdinalIgnoreCase)
+            ? Math.Max(1, establecimientosExistentes.Count)
+            : establecimientosExistentes.Count + 1;
+
+        if (totalEstablecimientos > suscripcion.Plan.MaxEstablecimientos)
         {
-            throw new EstablishmentLimitExceededException(suscripcion.Plan.MaxEstablecimientos, numEstablecimiento);
+            throw new EstablishmentLimitExceededException(suscripcion.Plan.MaxEstablecimientos, totalEstablecimientos);
         }
 
         // 4. Validar cuota de documentos en el periodo actual (límite por tipo de comprobante)
