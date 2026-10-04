@@ -40,10 +40,12 @@ public class GetNotaCreditoPdfQueryHandler : IRequestHandler<GetNotaCreditoPdfQu
             throw new UnauthorizedAccessException("No tiene autorización para acceder a esta nota de crédito.");
         }
 
-        var emisor = await _context.Emisores
-            .FirstOrDefaultAsync(e => e.Id == notaCredito.EmisorId, cancellationToken);
+        var emisor = (notaCredito.EmisorId > 0
+            ? await _context.Emisores.FirstOrDefaultAsync(e => e.Id == notaCredito.EmisorId, cancellationToken)
+            : null)
+            ?? await _context.Emisores.FirstOrDefaultAsync(e => e.TenantId == notaCredito.TenantId, cancellationToken);
 
-        var pdfBytes = _pdfGenerator.GenerarNotaCreditoRide(notaCredito, emisor);
+        var pdfBytes = _pdfGenerator.GenerarNotaCreditoRide(notaCredito, emisor, emisor?.Logo);
         var fileName = $"NOTA_CREDITO_{notaCredito.Establecimiento}_{notaCredito.PuntoEmision}_{notaCredito.Secuencial}.pdf";
 
         return new NotaCreditoPdfFileDto(pdfBytes, "application/pdf", fileName);
