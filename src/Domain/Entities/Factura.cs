@@ -141,7 +141,8 @@ public class Factura : BaseAuditableEntity
         List<CampoAdicional>? camposAdicionales = null,
         string? formaPago = "01",
         decimal? plazo = null,
-        string? unidadTiempo = null)
+        string? unidadTiempo = null,
+        bool validarInvariantes = true)
     {
         var codigoFormaPago = string.IsNullOrWhiteSpace(formaPago) ? "01" : formaPago.Trim();
         var factura = new Factura
@@ -176,12 +177,32 @@ public class Factura : BaseAuditableEntity
         };
 
         factura.CalcularTotales();
-        factura.ValidarInvariantes(); // Aquí se validará automáticamente la regla de los $50 USD[cite: 3].
+        if (validarInvariantes)
+        {
+            factura.ValidarInvariantes(); // Aquí se validará automáticamente la regla de los $50 USD[cite: 3].
+        }
     
         // Si estás utilizando Domain Events, aquí registrarías el evento antes de retornar:
         // factura.AddDomainEvent(new FacturaEmitidaEvent(factura));
 
         return factura;
+    }
+
+    public void EstablecerEstadoHistorico(
+        string estado,
+        string? numeroAutorizacion = null,
+        DateTime? fechaAutorizacion = null,
+        string? mensajeError = null,
+        string? xmlFirmado = null)
+    {
+        Estado = string.IsNullOrWhiteSpace(estado) ? "CREADA" : estado.Trim().ToUpperInvariant();
+        NumeroAutorizacion = numeroAutorizacion;
+        FechaAutorizacion = fechaAutorizacion;
+        MensajeErrorSri = mensajeError;
+        if (!string.IsNullOrWhiteSpace(xmlFirmado))
+        {
+            XmlFirmado = xmlFirmado;
+        }
     }
 
     public void AsignarCatalogoCliente(Guid catalogoClienteId) => CatalogoClienteId = catalogoClienteId;

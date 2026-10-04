@@ -111,5 +111,17 @@ public class TenantSubscription : BaseAuditableEntity
     {
         Estado = "CANCELADO";
     }
+
+    public void MarcarComoVencido()
+    {
+        Estado = "VENCIDO";
+    }
+
+    public void EstablecerEstado(string nuevoEstado)
+    {
+        if (string.IsNullOrWhiteSpace(nuevoEstado))
+            throw new ArgumentException("El estado no puede estar vacío.", nameof(nuevoEstado));
+        Estado = nuevoEstado.Trim().ToUpperInvariant();
+    }
 }
 
