@@ -36,9 +36,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
 
         // Filtro global multi-tenant por TenantId
         builder.Entity<CatalogoCliente>()
-            .HasQueryFilter(c => _user == null || !_user.TenantId.HasValue || _user.TenantId.Value == Guid.Empty || c.TenantId == _user.TenantId.Value);
+            .HasQueryFilter(c => _user == null || _user.TenantId == null || _user.TenantId == Guid.Empty || c.TenantId == _user.TenantId);
 
         builder.Entity<CatalogoProducto>()
-            .HasQueryFilter(p => _user == null || !_user.TenantId.HasValue || _user.TenantId.Value == Guid.Empty || p.TenantId == _user.TenantId.Value);
+            .HasQueryFilter(p => _user == null || _user.TenantId == null || _user.TenantId == Guid.Empty || p.TenantId == _user.TenantId);
     }
 }

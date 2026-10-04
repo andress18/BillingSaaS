@@ -12,7 +12,7 @@ Usuario,Password,PasswordFirma
 # cliente@empresa.com,MiPasswordSeguro#,
 # admin_negocio,SuperPass2023!,MiClaveP12
 
-LOORAN,Loor875458*,Loor875458
+# LOORAN,Loor875458*,Loor875458
 # NELSON,Nelson89_,Nelson875
 # SANCHEZME,Sanchez875*,Sanchez875
 # CEVALLOSW,Cevallos875*,Cevallos875
@@ -117,5 +117,5 @@ LOORAN,Loor875458*,Loor875458
 # QUALITYPRINT,Quality875*,Diego875
 # LUZDELGUAYAS,Guayas875*,Guayas875
 # LINDA,Linda875458*,Linda875458
-# SERCONKPO,Jose875458*,Jose875458
+SERCONKPO,Jose875458*,Jose875458
 # AMORES,Amores875*,Amores875458

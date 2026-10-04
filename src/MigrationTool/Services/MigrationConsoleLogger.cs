@@ -52,6 +52,7 @@ public static class MigrationConsoleLogger
         Console.ForegroundColor = ConsoleColor.White;
         Console.WriteLine($"Total Facturas Históricas Migradas:   {result.TotalFacturasMigradas}");
         Console.WriteLine($"Clientes de Catálogo Registrados:     {result.TotalClientesCatalogoCreados}");
+        Console.WriteLine($"Productos de Catálogo Registrados:    {result.TotalProductosCatalogoCreados}");
         Console.ResetColor();
 
         Console.WriteLine("--------------------------------------------------------------------------------");

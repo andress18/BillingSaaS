@@ -8,6 +8,7 @@ public class MigrationResult
     public int ClientesConError { get; set; }
     public int TotalFacturasMigradas { get; set; }
     public int TotalClientesCatalogoCreados { get; set; }
+    public int TotalProductosCatalogoCreados { get; set; }
     public int FirmasValidas { get; set; }
     public int FirmasCaducadas { get; set; }
     public int FirmasSinCertificado { get; set; }
