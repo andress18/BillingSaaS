@@ -112,14 +112,18 @@ public class OnboardingClienteTests
         result.PartnerId.ShouldBe(_partnerTenantId);
         result.PlanCodigo.ShouldBe("MIGRACION_SISTEMA");
         result.FechaVencimiento.ShouldBe(_now.AddYears(1));
+        result.TenantEstado.ShouldBe(TenantEstados.PendientePago);
+        result.TokenActivacion.ShouldNotBeNullOrWhiteSpace();
 
         var tenantDb = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == result.TenantId);
         tenantDb.ShouldNotBeNull();
         tenantDb.PartnerId.ShouldBe(_partnerTenantId);
+        tenantDb.Estado.ShouldBe(TenantEstados.PendientePago);
+        tenantDb.TokenActivacion.ShouldNotBeNullOrWhiteSpace();
 
         var subDb = await _context.Suscripciones.FirstOrDefaultAsync(s => s.TenantId == result.TenantId);
         subDb.ShouldNotBeNull();
-        subDb.Estado.ShouldBe("ACTIVO");
+        subDb.Estado.ShouldBe(TenantEstados.PendientePago);
         subDb.FechaVencimiento.ShouldBe(_now.AddYears(1));
     }
 
@@ -247,6 +251,37 @@ public class OnboardingClienteTests
         result.Count.ShouldBe(2);
         result.ShouldContain(c => c.NombreOrganizacion == "Cliente P");
         result.ShouldContain(c => c.NombreOrganizacion == "Cliente Directo");
+    }
+
+    [Test]
+    public async Task GetClientesCartera_OrdenadoPorNombreAscendente_DebeRetornarEnOrdenAlfabetico()
+    {
+        // Arrange
+        var tenantB = Tenant.Crear("Beta Farmacia", null);
+        var tenantA = Tenant.Crear("Alfa Ferreteria", null);
+        var tenantC = Tenant.Crear("Zeta Comercial", null);
+
+        _context.Tenants.AddRange(tenantB, tenantA, tenantC);
+        await _context.SaveChangesAsync();
+
+        _userMock.Setup(u => u.Id).Returns(_adminUserId);
+        _identityServiceMock.Setup(i => i.IsInRoleAsync(_adminUserId, Roles.Administrator)).ReturnsAsync(true);
+        _identityServiceMock.Setup(i => i.IsInRoleAsync(_adminUserId, Roles.Partner)).ReturnsAsync(false);
+
+        var handler = new GetClientesCarteraQueryHandler(
+            _context,
+            _identityServiceMock.Object,
+            _userMock.Object,
+            _timeProviderMock.Object);
+
+        // Act
+        var result = await handler.Handle(new GetClientesCarteraQuery(OrderBy: "nombre", Descending: false), CancellationToken.None);
+
+        // Assert
+        result.Count.ShouldBe(3);
+        result[0].NombreOrganizacion.ShouldBe("Alfa Ferreteria");
+        result[1].NombreOrganizacion.ShouldBe("Beta Farmacia");
+        result[2].NombreOrganizacion.ShouldBe("Zeta Comercial");
     }
 
     [Test]

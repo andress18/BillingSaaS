@@ -22,7 +22,8 @@ public class TenantSubscription : BaseAuditableEntity
         DateTime fechaInicio,
         DateTime fechaVencimiento,
         string frecuencia = "MENSUAL",
-        int diasGracia = 3)
+        int diasGracia = 3,
+        string estado = "ACTIVO")
     {
         return tenantId == Guid.Empty
             ? throw new ArgumentException("El TenantId es obligatorio.", nameof(tenantId))
@@ -37,19 +38,19 @@ public class TenantSubscription : BaseAuditableEntity
             FechaInicio = fechaInicio,
             FechaVencimiento = fechaVencimiento,
             Frecuencia = frecuencia.Trim().ToUpperInvariant(),
-            Estado = "ACTIVO",
+            Estado = string.IsNullOrWhiteSpace(estado) ? "ACTIVO" : estado.Trim().ToUpperInvariant(),
             DiasGracia = Math.Max(0, diasGracia)
         };
     }
 
     public bool EstaVigente(DateTime fechaUtc)
     {
-        return Estado != "CANCELADO" && fechaUtc <= FechaVencimiento.AddDays(DiasGracia);
+        return Estado != "CANCELADO" && Estado != "PENDIENTE_PAGO" && Estado != "VENCIDO" && fechaUtc <= FechaVencimiento.AddDays(DiasGracia);
     }
 
     public bool EstaEnPeriodoGracia(DateTime fechaUtc)
     {
-        return Estado != "CANCELADO" && fechaUtc > FechaVencimiento && fechaUtc <= FechaVencimiento.AddDays(DiasGracia);
+        return Estado != "CANCELADO" && Estado != "PENDIENTE_PAGO" && Estado != "VENCIDO" && fechaUtc > FechaVencimiento && fechaUtc <= FechaVencimiento.AddDays(DiasGracia);
     }
 
     public int ObtenerDiasRestantes(DateTime fechaUtc)
@@ -76,6 +77,13 @@ public class TenantSubscription : BaseAuditableEntity
             inicioMes = inicioMes.AddMonths(-1);
         }
         return inicioMes;
+    }
+
+    public void Activar(DateTime fechaActivacion, int diasVigencia = 365)
+    {
+        FechaInicio = fechaActivacion;
+        FechaVencimiento = fechaActivacion.AddDays(Math.Max(1, diasVigencia));
+        Estado = "ACTIVO";
     }
 
     public void Renovar(DateTime nuevaFechaVencimiento)

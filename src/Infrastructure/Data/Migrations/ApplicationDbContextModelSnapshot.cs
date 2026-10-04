@@ -1173,6 +1173,16 @@ namespace BillingSaaS.Infrastructure.Data.Migrations
                     b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("PENDIENTE_PAGO");
+
+                    b.Property<DateTime?>("FechaActivacion")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTimeOffset>("LastModified")
                         .HasColumnType("datetimeoffset");
 
@@ -1187,7 +1197,13 @@ namespace BillingSaaS.Infrastructure.Data.Migrations
                     b.Property<Guid?>("PartnerId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("TokenActivacion")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TokenActivacion");
 
                     b.ToTable("Tenants");
                 });

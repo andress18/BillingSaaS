@@ -8,6 +8,19 @@ public class SubscriptionRequiredException : Exception
         : base($"El tenant '{tenantId}' no tiene una suscripción activa configurada en la plataforma.") { }
 }
 
+public class TenantPaymentRequiredException : Exception
+{
+    public Guid TenantId { get; }
+    public string NombreOrganizacion { get; }
+
+    public TenantPaymentRequiredException(Guid tenantId, string nombreOrganizacion)
+        : base($"La cuenta '{nombreOrganizacion}' se encuentra en estado 'Pendiente de Pago'. Se requiere la confirmación del pago de la suscripción/comisión para habilitar la emisión de comprobantes electrónicos.")
+    {
+        TenantId = tenantId;
+        NombreOrganizacion = nombreOrganizacion;
+    }
+}
+
 public class SubscriptionExpiredException : Exception
 {
     public DateTime FechaVencimiento { get; }

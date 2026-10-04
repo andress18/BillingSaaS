@@ -26,6 +26,12 @@ public class SubscriptionValidationService : ISubscriptionValidationService
         string codigoEstablecimiento,
         CancellationToken cancellationToken = default)
     {
+        var tenant = await _context.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
+        if (tenant != null && (tenant.Estado == BillingSaaS.Domain.Constants.TenantEstados.PendientePago || !tenant.Activo))
+        {
+            throw new TenantPaymentRequiredException(tenant.Id, tenant.Nombre);
+        }
+
         var suscripcion = await _context.Suscripciones
             .Include(s => s.Plan)
             .FirstOrDefaultAsync(s => s.TenantId == tenantId, cancellationToken);
@@ -33,6 +39,11 @@ public class SubscriptionValidationService : ISubscriptionValidationService
         if (suscripcion == null)
         {
             throw new SubscriptionRequiredException(tenantId);
+        }
+
+        if (suscripcion.Estado == BillingSaaS.Domain.Constants.TenantEstados.PendientePago)
+        {
+            throw new TenantPaymentRequiredException(tenantId, tenant?.Nombre ?? tenantId.ToString());
         }
 
         var ahoraUtc = _timeProvider.GetUtcNow().UtcDateTime;

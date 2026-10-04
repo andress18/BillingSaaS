@@ -16,6 +16,18 @@ public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
 
         builder.Property(t => t.Activo)
             .IsRequired();
+
+        builder.Property(t => t.Estado)
+            .HasMaxLength(30)
+            .IsRequired()
+            .HasDefaultValue(BillingSaaS.Domain.Constants.TenantEstados.PendientePago);
+
+        builder.Property(t => t.TokenActivacion)
+            .HasMaxLength(100);
+
+        builder.Property(t => t.FechaActivacion);
+
+        builder.HasIndex(t => t.TokenActivacion);
     }
 }
 

@@ -18,6 +18,9 @@ public record ClienteCarteraDto
     public Guid? PartnerId { get; init; }
     public string? PartnerNombre { get; init; }
     public DateTime FechaRegistro { get; init; }
+    public string TenantEstado { get; init; } = string.Empty;
+    public string? TokenActivacion { get; init; }
+    public DateTime? FechaActivacion { get; init; }
 
     // Suscripción
     public string PlanCodigo { get; init; } = string.Empty;
@@ -35,7 +38,10 @@ public record ClienteCarteraDto
     public int FacturasEmitidas { get; init; }
 }
 
-public record GetClientesCarteraQuery(Guid? PartnerIdFiltro = null) : IRequest<List<ClienteCarteraDto>>;
+public record GetClientesCarteraQuery(
+    Guid? PartnerIdFiltro = null,
+    string? OrderBy = null,
+    bool Descending = true) : IRequest<List<ClienteCarteraDto>>;
 
 public class GetClientesCarteraQueryHandler : IRequestHandler<GetClientesCarteraQuery, List<ClienteCarteraDto>>
 {
@@ -146,6 +152,9 @@ public class GetClientesCarteraQueryHandler : IRequestHandler<GetClientesCartera
                 PartnerId = tenant.PartnerId,
                 PartnerNombre = partnerNombre,
                 FechaRegistro = tenant.Created.UtcDateTime,
+                TenantEstado = tenant.Estado,
+                TokenActivacion = isAdmin ? tenant.TokenActivacion : null,
+                FechaActivacion = tenant.FechaActivacion,
 
                 PlanCodigo = sub?.Plan?.Codigo ?? "SIN_PLAN",
                 PlanNombre = sub?.Plan?.Nombre ?? "Sin Suscripción",
@@ -160,6 +169,54 @@ public class GetClientesCarteraQueryHandler : IRequestHandler<GetClientesCartera
                 DiasRestantesFirma = diasRestantesFirma,
                 FacturasEmitidas = facturasCount
             });
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.OrderBy))
+        {
+            resultado = (request.OrderBy.Trim().ToLowerInvariant()) switch
+            {
+                "nombre" or "nombreorganizacion" => request.Descending
+                    ? resultado.OrderByDescending(r => r.NombreOrganizacion, StringComparer.OrdinalIgnoreCase).ToList()
+                    : resultado.OrderBy(r => r.NombreOrganizacion, StringComparer.OrdinalIgnoreCase).ToList(),
+
+                "estado" or "tenantestado" => request.Descending
+                    ? resultado.OrderByDescending(r => r.TenantEstado, StringComparer.OrdinalIgnoreCase).ToList()
+                    : resultado.OrderBy(r => r.TenantEstado, StringComparer.OrdinalIgnoreCase).ToList(),
+
+                "partner" or "partnernombre" => request.Descending
+                    ? resultado.OrderByDescending(r => r.PartnerNombre, StringComparer.OrdinalIgnoreCase).ToList()
+                    : resultado.OrderBy(r => r.PartnerNombre, StringComparer.OrdinalIgnoreCase).ToList(),
+
+                "ruc" => request.Descending
+                    ? resultado.OrderByDescending(r => r.Ruc, StringComparer.OrdinalIgnoreCase).ToList()
+                    : resultado.OrderBy(r => r.Ruc, StringComparer.OrdinalIgnoreCase).ToList(),
+
+                "razonsocial" => request.Descending
+                    ? resultado.OrderByDescending(r => r.RazonSocial, StringComparer.OrdinalIgnoreCase).ToList()
+                    : resultado.OrderBy(r => r.RazonSocial, StringComparer.OrdinalIgnoreCase).ToList(),
+
+                "plan" or "plancodigo" => request.Descending
+                    ? resultado.OrderByDescending(r => r.PlanCodigo, StringComparer.OrdinalIgnoreCase).ToList()
+                    : resultado.OrderBy(r => r.PlanCodigo, StringComparer.OrdinalIgnoreCase).ToList(),
+
+                "diassuscripcion" or "diasrestantessuscripcion" => request.Descending
+                    ? resultado.OrderByDescending(r => r.DiasRestantesSuscripcion).ToList()
+                    : resultado.OrderBy(r => r.DiasRestantesSuscripcion).ToList(),
+
+                "diasfirma" or "diasrestantesfirma" => request.Descending
+                    ? resultado.OrderByDescending(r => r.DiasRestantesFirma ?? 0).ToList()
+                    : resultado.OrderBy(r => r.DiasRestantesFirma ?? 0).ToList(),
+
+                "facturas" or "facturasemitidas" => request.Descending
+                    ? resultado.OrderByDescending(r => r.FacturasEmitidas).ToList()
+                    : resultado.OrderBy(r => r.FacturasEmitidas).ToList(),
+
+                "fecha" or "fecharegistro" => request.Descending
+                    ? resultado.OrderByDescending(r => r.FechaRegistro).ToList()
+                    : resultado.OrderBy(r => r.FechaRegistro).ToList(),
+
+                _ => resultado
+            };
         }
 
         return resultado;
