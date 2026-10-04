@@ -1,4 +1,5 @@
 using BillingSaaS.Application.Common.Interfaces;
+using BillingSaaS.Domain.Constants;
 using BillingSaaS.Domain.Entities;
 using BillingSaaS.Infrastructure.Data;
 using BillingSaaS.Infrastructure.Identity;
@@ -249,7 +250,7 @@ public class ClienteMigrador : IClienteMigrador
                             : (!string.IsNullOrWhiteSpace(clienteDto.RazonSocial) ? clienteDto.RazonSocial : clienteDto.Username);
 
                         var partnerId = clienteDto.PartnerId != Guid.Empty ? clienteDto.PartnerId : _options.PartnerId;
-                        var tenant = Tenant.Crear(nombreTenant, partnerId, tenantId);
+                        var tenant = Tenant.Crear(nombreTenant, partnerId, tenantId, estado: TenantEstados.Activo);
 
                         _context.Tenants.Add(tenant);
                         await _context.SaveChangesAsync(cancellationToken);

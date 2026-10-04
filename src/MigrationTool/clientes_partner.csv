@@ -12,9 +12,9 @@ Usuario,Password,PasswordFirma
 # cliente@empresa.com,MiPasswordSeguro#,
 # admin_negocio,SuperPass2023!,MiClaveP12
 
-# LOORAN,Loor875458*,Loor875458
-# NELSON,Nelson89_,Nelson875
-# SANCHEZME,Sanchez875*,Sanchez875
+LOORAN,Loor875458*,Loor875458
+NELSON,Nelson89_,Nelson875
+SANCHEZME,Sanchez875*,Sanchez875
 # CEVALLOSW,Cevallos875*,Cevallos875
 # RADIOSM,Radio875*,Radio875
 # JAVIERSIMBA,Javier875458*,Javier875458

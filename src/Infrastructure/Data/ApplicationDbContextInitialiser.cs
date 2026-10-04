@@ -145,6 +145,33 @@ public class ApplicationDbContextInitialiser
                                 await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Emisores ADD COLUMN SecuencialNotaCredito INTEGER NOT NULL DEFAULT 0;");
                             }
 
+                            // Asegurar Estado, TokenActivacion y FechaActivacion en Tenants
+                            using var cmdTenant = connection.CreateCommand();
+                            cmdTenant.CommandText = "PRAGMA table_info(Tenants);";
+                            var colsTenant = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                            using (var readerTenant = await cmdTenant.ExecuteReaderAsync())
+                            {
+                                while (await readerTenant.ReadAsync())
+                                {
+                                    colsTenant.Add(readerTenant.GetString(1));
+                                }
+                            }
+
+                            if (!colsTenant.Contains("Estado"))
+                            {
+                                await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Tenants ADD COLUMN Estado TEXT NOT NULL DEFAULT 'ACTIVO';");
+                            }
+
+                            if (!colsTenant.Contains("TokenActivacion"))
+                            {
+                                await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Tenants ADD COLUMN TokenActivacion TEXT NULL;");
+                            }
+
+                            if (!colsTenant.Contains("FechaActivacion"))
+                            {
+                                await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Tenants ADD COLUMN FechaActivacion TEXT NULL;");
+                            }
+
                             // Asegurar creación de tablas e índices del catálogo maestro y notas de crédito
                             await _context.Database.ExecuteSqlRawAsync(@"
                                 CREATE TABLE IF NOT EXISTS CatalogoClientes (
@@ -306,9 +333,14 @@ public class ApplicationDbContextInitialiser
             adminTenant = Tenant.Crear(
                 nombre: "ADMINISTRACION SAAS CENTRAL",
                 partnerId: null,
-                id: adminTenantId
+                id: adminTenantId,
+                estado: TenantEstados.Activo
             );
             _context.Tenants.Add(adminTenant);
+        }
+        else if (adminTenant.Estado != TenantEstados.Activo)
+        {
+            adminTenant.Activar();
         }
 
         // 2.2 Partner Oficial: "Gorky"
@@ -318,9 +350,14 @@ public class ApplicationDbContextInitialiser
             partnerTenant = Tenant.Crear(
                 nombre: "Gorky",
                 partnerId: null,
-                id: partnerTenantId
+                id: partnerTenantId,
+                estado: TenantEstados.Activo
             );
             _context.Tenants.Add(partnerTenant);
+        }
+        else if (partnerTenant.Estado != TenantEstados.Activo)
+        {
+            partnerTenant.Activar();
         }
 
         // 2.3 Cliente Demo (Solo en ambiente local SQLite para pruebas)
@@ -332,9 +369,14 @@ public class ApplicationDbContextInitialiser
                 demoTenant = Tenant.Crear(
                     nombre: "PRUEBAS SAAS FACTURACION",
                     partnerId: partnerTenantId,
-                    id: demoTenantId
+                    id: demoTenantId,
+                    estado: TenantEstados.Activo
                 );
                 _context.Tenants.Add(demoTenant);
+            }
+            else if (demoTenant.Estado != TenantEstados.Activo)
+            {
+                demoTenant.Activar();
             }
         }
 

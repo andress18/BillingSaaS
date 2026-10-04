@@ -54,6 +54,8 @@ public record OnboardingClienteResponseDto
     public bool EmisorConfigurado { get; init; }
     public bool CertificadoDigitalConfigurado { get; init; }
     public DateTime? FechaCaducidadFirma { get; init; }
+    public string TenantEstado { get; init; } = string.Empty;
+    public string? TokenActivacion { get; init; }
     public string MensajeParaCliente { get; init; } = string.Empty;
 }
 
@@ -143,14 +145,15 @@ public class OnboardingClienteCommandHandler : IRequestHandler<OnboardingCliente
             throw new InvalidOperationException($"No se pudo crear el usuario del cliente: {string.Join(", ", createResult.Errors)}");
         }
 
-        // 6. Crear Suscripción Activa
+        // 6. Crear Suscripción en estado Pendiente de Pago
         var suscripcion = TenantSubscription.Crear(
             tenant.Id,
             plan.Id,
             ahoraUtc,
             fechaFin,
             frecuencia,
-            diasGracia: 3
+            diasGracia: 3,
+            estado: TenantEstados.PendientePago
         );
         _context.Suscripciones.Add(suscripcion);
 
@@ -203,7 +206,7 @@ public class OnboardingClienteCommandHandler : IRequestHandler<OnboardingCliente
         await _context.SaveChangesAsync(cancellationToken);
 
         var loginIdentifier = !string.IsNullOrWhiteSpace(username) ? username : email;
-        var mensaje = $"Hola {request.NombreOrganizacion}, tu cuenta de facturación electrónica ha sido activada con el {plan.Nombre}. Puedes ingresar con tu usuario: {loginIdentifier} y tu contraseña temporal: {password}";
+        var mensaje = $"Hola {request.NombreOrganizacion}, tu cuenta de facturación electrónica ha sido creada con el {plan.Nombre} en estado 'Pendiente de Pago'. Puedes ingresar con tu usuario: {loginIdentifier} y tu contraseña temporal: {password} para configurar tus catálogos y firma digital. La emisión de facturas se habilitará una vez confirmado el pago de la suscripción.";
 
         return new OnboardingClienteResponseDto
         {
@@ -221,6 +224,8 @@ public class OnboardingClienteCommandHandler : IRequestHandler<OnboardingCliente
             EmisorConfigurado = emisorConfigurado,
             CertificadoDigitalConfigurado = certificadoConfigurado,
             FechaCaducidadFirma = caducidadFirma,
+            TenantEstado = tenant.Estado,
+            TokenActivacion = tenant.TokenActivacion,
             MensajeParaCliente = mensaje
         };
     }
