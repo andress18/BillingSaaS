@@ -459,7 +459,7 @@ public class ApplicationDbContextInitialiser
                 precioMensual: 3.00m,
                 precioAnual: 20.00m,
                 maxDocumentosMensuales: null,
-                maxDocumentosAnuales: 100,
+                maxDocumentosAnuales: 300,
                 maxEstablecimientos: 1,
                 tiposDocumentosPermitidos: "01,04,05",
                 esPublico: true
@@ -469,7 +469,30 @@ public class ApplicationDbContextInitialiser
         else
         {
             planMigracionSistema.ActualizarPrecios(3.00m, 20.00m);
-            planMigracionSistema.ActualizarLimites(null, 100, 1, "01,04,05");
+            planMigracionSistema.ActualizarLimites(null, 300, 1, "01,04,05");
+        }
+        // 4.1. Catálogo de Planes Oficiales
+        var planComercioPro = await _context.Planes.FirstOrDefaultAsync(p => p.Codigo == "PLAN_COMERCIO_PRO");
+        if (planComercioPro == null)
+        {
+            planComercioPro = Plan.Crear(
+                codigo: "PLAN_COMERCIO_PRO",
+                nombre: "Plan Comercio Pro",
+                descripcion: "Diseñado para negocios y comercios con emisión diaria frecuente. Incluye facturas, notas de crédito y notas de débito con amplio margen anual.",
+                precioMensual: 6.00m,
+                precioAnual: 45.00m,
+                maxDocumentosMensuales: null,
+                maxDocumentosAnuales: 1500, // Margen holgado para cubrir su ritmo histórico
+                maxEstablecimientos: 1,
+                tiposDocumentosPermitidos: "01,04,05",
+                esPublico: true // Puede ser público para nuevos clientes con este volumen
+            );
+            _context.Planes.Add(planComercioPro);
+        }
+        else
+        {
+            planComercioPro.ActualizarPrecios(6.00m, 45.00m);
+            planComercioPro.ActualizarLimites(null, 1500, 1, "01,04,05");
         }
 
         var planMigracionFirma = await _context.Planes.FirstOrDefaultAsync(p => p.Codigo == "MIGRACION_FIRMA");
@@ -482,7 +505,7 @@ public class ApplicationDbContextInitialiser
                 precioMensual: 5.00m,
                 precioAnual: 45.00m,
                 maxDocumentosMensuales: null,
-                maxDocumentosAnuales: 100,
+                maxDocumentosAnuales: 300,
                 maxEstablecimientos: 1,
                 tiposDocumentosPermitidos: "01,04,05",
                 esPublico: true
@@ -492,7 +515,7 @@ public class ApplicationDbContextInitialiser
         else
         {
             planMigracionFirma.ActualizarPrecios(5.00m, 45.00m);
-            planMigracionFirma.ActualizarLimites(null, 100, 1, "01,04,05");
+            planMigracionFirma.ActualizarLimites(null, 300, 1, "01,04,05");
         }
 
         var planCortesiaPartner = await _context.Planes.FirstOrDefaultAsync(p => p.Codigo == "PLAN_CORTESIA_PARTNER");
