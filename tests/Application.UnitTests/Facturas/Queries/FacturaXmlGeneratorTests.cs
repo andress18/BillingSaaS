@@ -201,6 +201,35 @@ public class FacturaXmlGeneratorTests
 
         // Assert
         xmlStr.ShouldNotContain("<contribuyenteRimpe>");
+        xmlStr.ShouldContain("<campoAdicional nombre=\"Regimen\">CONTRIBUYENTE RÉGIMEN GENERAL</campoAdicional>");
+    }
+
+    [Test]
+    public void GenerarXml_ConRegimenGeneralExplicito_NoDeberiaIncluirEtiquetaContribuyenteRimpe_PeroSiCampoAdicional()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var comprador = Comprador.Crear("07", "9999999999999", "CONSUMIDOR FINAL");
+        var detalles = new List<DetalleFactura>
+        {
+            DetalleFactura.Crear("GEN-2", "Venta General Explícita", 1, 20m, 0,
+                [Impuesto.Crear("2", "4", 15m, 20m)])
+        };
+
+        var factura = Factura.Crear(
+            tenantId, 1, "EMPRESA GENERAL SA", "0957790108001",
+            "001", "001", "000000304", "Matriz",
+            DateTime.UtcNow, comprador, detalles,
+            contribuyenteRimpe: "CONTRIBUYENTE RÉGIMEN GENERAL");
+        factura.AsignarClaveAcceso("1609202601095779010800110010010000003041234567813");
+
+        // Act
+        byte[] xmlBytes = _xmlGenerator.GenerarXmlBytes(factura);
+        string xmlStr = Encoding.UTF8.GetString(xmlBytes);
+
+        // Assert: infoTributaria NO debe tener contribuyenteRimpe, infoAdicional SÍ
+        xmlStr.ShouldNotContain("<contribuyenteRimpe>");
+        xmlStr.ShouldContain("<campoAdicional nombre=\"Regimen\">CONTRIBUYENTE RÉGIMEN GENERAL</campoAdicional>");
     }
 
     [Test]

@@ -276,4 +276,33 @@ public class RidePdfGeneratorTests
         string magicBytes = Encoding.ASCII.GetString(pdfBytes, 0, 4);
         magicBytes.ShouldBe("%PDF");
     }
+
+    [Test]
+    public void GenerarFacturaRide_ConRegimenGeneral_GeneraPdfConLeyendaOficial()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var cliente = Comprador.Crear("07", "9999999999999", "CONSUMIDOR FINAL");
+        var detalles = new List<DetalleFactura>
+        {
+            DetalleFactura.Crear("GEN-01", "Venta Régimen General", 1.00m, 20.00m, 0.00m,
+                new List<Impuesto> { Impuesto.Crear("2", "4", 15.00m, 20.00m) })
+        };
+
+        var factura = Factura.Crear(
+            tenantId, 1, "EMPRESA REGIMEN GENERAL SA", "0957790108001",
+            "001", "001", "000000999", "Guayaquil",
+            DateTime.UtcNow, cliente, detalles,
+            contribuyenteRimpe: "CONTRIBUYENTE RÉGIMEN GENERAL");
+        factura.AsignarClaveAcceso("1609202601095779010800110010010000009991234567813");
+
+        // Act
+        var pdfBytes = _pdfGenerator.GenerarFacturaRide(factura);
+
+        // Assert
+        pdfBytes.ShouldNotBeNull();
+        pdfBytes.Length.ShouldBeGreaterThan(500);
+        string magicBytes = Encoding.ASCII.GetString(pdfBytes, 0, 4);
+        magicBytes.ShouldBe("%PDF");
+    }
 }

@@ -56,8 +56,8 @@ public class Emisores : IEndpointGroup
             new(
                 Codigo: Domain.Constants.RegimenRimpeTipos.CodigoGeneral,
                 Nombre: "Régimen General",
-                LeyendaSri: null,
-                Descripcion: "Contribuyentes no sujetos a RIMPE. Facturación general con tarifas de IVA según el producto (15%, 5%, 0%)."
+                LeyendaSri: Domain.Constants.RegimenRimpeTipos.General,
+                Descripcion: "Contribuyentes en Régimen General. Facturación general con tarifas de IVA según el producto (15%, 5%, 0%) y leyenda oficial 'CONTRIBUYENTE RÉGIMEN GENERAL' en RIDE."
             ),
             new(
                 Codigo: Domain.Constants.RegimenRimpeTipos.CodigoEmprendedor,

@@ -4,6 +4,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using BillingSaaS.Application.Common.Interfaces;
+using BillingSaaS.Domain.Constants;
 using BillingSaaS.Domain.Entities;
 
 namespace BillingSaaS.Infrastructure.Servicios;
@@ -61,7 +62,7 @@ public class FacturaXmlGenerator : IFacturaXmlGenerator
                     new XElement("ptoEmi", factura.PuntoEmision),
                     new XElement("secuencial", factura.Secuencial),
                     new XElement("dirMatriz", factura.DireccionMatriz),
-                    !string.IsNullOrWhiteSpace(factura.ContribuyenteRimpe)
+                    !string.IsNullOrWhiteSpace(factura.ContribuyenteRimpe) && RegimenRimpeTipos.EsRimpe(factura.ContribuyenteRimpe)
                         ? new XElement("contribuyenteRimpe", factura.ContribuyenteRimpe)
                         : null
                 ),
@@ -137,10 +138,10 @@ public class FacturaXmlGenerator : IFacturaXmlGenerator
                         new XAttribute("nombre", "RUC Proveedor"),
                         _rucProveedor
                     ),
-                    !string.IsNullOrWhiteSpace(factura.ContribuyenteRimpe)
-                        ? new XElement("campoAdicional", new XAttribute("nombre", "Regimen"),
-                            factura.ContribuyenteRimpe)
-                        : null,
+                    new XElement("campoAdicional",
+                        new XAttribute("nombre", "Regimen"),
+                        RegimenRimpeTipos.ResolverParaRide(factura.ContribuyenteRimpe)
+                    ),
                     // Opcionales del cliente (Si tiene dirección o correo configurado)
                     !string.IsNullOrWhiteSpace(factura.Cliente.Direccion)
                         ? new XElement("campoAdicional", new XAttribute("nombre", "Direccion"),
