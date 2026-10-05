@@ -163,7 +163,7 @@ public class EmitirFacturaCommandHandler : IRequestHandler<EmitirFacturaCommand,
 
         var regimenRimpe = !string.IsNullOrWhiteSpace(request.RegimenRimpe)
             ? Domain.Constants.RegimenRimpeTipos.Normalizar(request.RegimenRimpe)
-            : emisor.RegimenRimpe;
+            : Domain.Constants.RegimenRimpeTipos.Normalizar(emisor.RegimenRimpe) ?? Domain.Constants.RegimenRimpeTipos.General;
 
         var camposSource = request.CamposAdicionales ?? request.InfoAdicional;
         var camposAdicionales = camposSource?

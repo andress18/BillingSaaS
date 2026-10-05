@@ -142,6 +142,7 @@ public class RidePdfGenerator : IRidePdfGenerator
         bool obligadoContabilidad = factura.Emisor?.ObligadoContabilidad == "SI";
         string? contribuyenteEspecial = factura.Emisor?.ContribuyenteEspecial;
         string? regimenRimpe = factura.Emisor?.RegimenRimpe ?? factura.RegimenRimpeEmisor;
+        string regimenTributario = RegimenRimpeTipos.ResolverParaRide(regimenRimpe);
 
         // 5. Creación del Documento QuestPDF
         var document = Document.Create(container =>
@@ -203,10 +204,7 @@ public class RidePdfGenerator : IRidePdfGenerator
                                     t.Span(obligadoContabilidad ? "SI" : "NO");
                                 });
 
-                                if (!string.IsNullOrWhiteSpace(regimenRimpe))
-                                {
-                                    emisorBox.Item().PaddingTop(2).Text(regimenRimpe.ToUpperInvariant()).Bold().FontSize(7.5f);
-                                }
+                                emisorBox.Item().PaddingTop(2).Text(regimenTributario.ToUpperInvariant()).Bold().FontSize(7.5f);
                             });
                         });
 
@@ -370,14 +368,11 @@ public class RidePdfGenerator : IRidePdfGenerator
                                     });
                                 }
 
-                                if (!string.IsNullOrWhiteSpace(regimenRimpe))
+                                adicionalBox.Item().PaddingTop(2).Text(t =>
                                 {
-                                    adicionalBox.Item().PaddingTop(2).Text(t =>
-                                    {
-                                        t.Span("Régimen Tributario: ").Bold();
-                                        t.Span(regimenRimpe);
-                                    });
-                                }
+                                    t.Span("Régimen Tributario: ").Bold();
+                                    t.Span(regimenTributario);
+                                });
 
                                 if (factura.CamposAdicionales != null && factura.CamposAdicionales.Count > 0)
                                 {
@@ -581,6 +576,7 @@ public class RidePdfGenerator : IRidePdfGenerator
         bool obligadoContabilidad = notaDebito.Emisor?.ObligadoContabilidad == "SI";
         string? contribuyenteEspecial = notaDebito.Emisor?.ContribuyenteEspecial;
         string? regimenRimpe = notaDebito.Emisor?.RegimenRimpe;
+        string regimenTributario = RegimenRimpeTipos.ResolverParaRide(regimenRimpe);
 
         var document = Document.Create(container =>
         {
@@ -639,10 +635,7 @@ public class RidePdfGenerator : IRidePdfGenerator
                                     t.Span(obligadoContabilidad ? "SI" : "NO");
                                 });
 
-                                if (!string.IsNullOrWhiteSpace(regimenRimpe))
-                                {
-                                    emisorBox.Item().PaddingTop(2).Text(regimenRimpe.ToUpperInvariant()).Bold().FontSize(7.5f);
-                                }
+                                emisorBox.Item().PaddingTop(2).Text(regimenTributario.ToUpperInvariant()).Bold().FontSize(7.5f);
                             });
                         });
 
@@ -798,6 +791,12 @@ public class RidePdfGenerator : IRidePdfGenerator
                                         t.Span(notaDebito.Cliente.Direccion);
                                     });
                                 }
+
+                                infoAdicional.Item().PaddingTop(2).Text(t =>
+                                {
+                                    t.Span("Régimen Tributario: ").Bold();
+                                    t.Span(regimenTributario);
+                                });
 
                                 // Leyenda técnica de software / Anexo 26 SRI
                                 infoAdicional.Item().PaddingTop(3).Text($"Software: {_nombreProveedor} (RUC Proveedor: {_rucProveedor} - Anexo 26)").FontSize(7f).FontColor(Colors.Grey.Darken2);
@@ -974,6 +973,7 @@ public class RidePdfGenerator : IRidePdfGenerator
         bool obligadoContabilidad = notaCredito.Emisor?.ObligadoContabilidad == "SI";
         string? contribuyenteEspecial = notaCredito.Emisor?.ContribuyenteEspecial;
         string? regimenRimpe = notaCredito.Emisor?.RegimenRimpe;
+        string regimenTributario = RegimenRimpeTipos.ResolverParaRide(regimenRimpe);
 
         var document = Document.Create(container =>
         {
@@ -1011,8 +1011,7 @@ public class RidePdfGenerator : IRidePdfGenerator
 
                                 emisorBox.Item().Text($"OBLIGADO A LLEVAR CONTABILIDAD: {(obligadoContabilidad ? "SI" : "NO")}").FontSize(8).Bold();
 
-                                if (!string.IsNullOrWhiteSpace(regimenRimpe))
-                                    emisorBox.Item().PaddingTop(2).Text(regimenRimpe).FontSize(7.5f).Bold();
+                                emisorBox.Item().PaddingTop(2).Text(regimenTributario.ToUpperInvariant()).FontSize(7.5f).Bold();
                             });
                         });
 
@@ -1133,6 +1132,12 @@ public class RidePdfGenerator : IRidePdfGenerator
                                     box.Item().PaddingTop(2).Text($"Dirección: {notaCredito.Cliente.Direccion}").FontSize(7.5f);
                                 if (!string.IsNullOrWhiteSpace(notaCredito.Cliente?.CorreoElectronico))
                                     box.Item().PaddingTop(1).Text($"Email: {notaCredito.Cliente.CorreoElectronico}").FontSize(7.5f);
+
+                                box.Item().PaddingTop(2).Text(t =>
+                                {
+                                    t.Span("Régimen Tributario: ").Bold();
+                                    t.Span(regimenTributario);
+                                });
 
                                 // Leyenda técnica de software / Anexo 26 SRI
                                 box.Item().PaddingTop(3).Text($"Software: {_nombreProveedor} (RUC Proveedor: {_rucProveedor} - Anexo 26)").FontSize(7f).FontColor(Colors.Grey.Darken2);
