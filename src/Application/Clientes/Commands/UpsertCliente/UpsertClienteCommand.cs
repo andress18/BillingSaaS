@@ -51,7 +51,7 @@ public class UpsertClienteCommandHandler : IRequestHandler<UpsertClienteCommand,
 
         var totalClientes = await _context.CatalogoClientes
             .CountAsync(c => c.TenantId == tenantId && c.Activo, cancellationToken);
-        if (totalClientes >= 10)
+        if (totalClientes >= 1000)
         {
             throw new InvalidOperationException("Ha alcanzado el límite máximo permitido de 10 compradores registrados en su catálogo.");
         }

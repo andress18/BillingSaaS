@@ -46,7 +46,7 @@ public class CrearProductoCommandHandler : IRequestHandler<CrearProductoCommand,
 
             var totalActivos = await _context.CatalogoProductos
                 .CountAsync(p => p.TenantId == tenantId && p.Activo, cancellationToken);
-            if (totalActivos >= 25)
+            if (totalActivos >= 1000)
             {
                 throw new InvalidOperationException("Ha alcanzado el límite máximo permitido de 25 productos o servicios registrados en su catálogo.");
             }
