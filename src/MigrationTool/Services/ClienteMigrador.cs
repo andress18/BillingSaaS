@@ -81,7 +81,8 @@ public class ClienteMigrador : IClienteMigrador
 
                             if (emisorExistente != null)
                             {
-                                // Si el cliente ya existe pero tenemos su contraseña real del CSV, actualizarla de inmediato
+                                /*
+                                // [COMENTADO PARA PRODUCCIÓN]: No sobrescribir contraseñas de usuarios existentes
                                 if (!string.IsNullOrWhiteSpace(clienteDto.PasswordPlana) && clienteDto.PasswordPlana != "Temporal123*")
                                 {
                                     var uExistente = await _userManager.FindByEmailAsync(clienteDto.Email?.Trim() ?? "")
@@ -97,11 +98,13 @@ public class ClienteMigrador : IClienteMigrador
                                         }
                                     }
                                 }
+                                */
 
-                                 // Si el emisor no tenía logo o su logo actual no tiene formato Data URI
                                 var emisorTracked = await _context.Emisores.FirstOrDefaultAsync(e => e.Id == emisorExistente.Id, cancellationToken);
                                 if (emisorTracked != null)
                                 {
+                                    /*
+                                    // [COMENTADO PARA PRODUCCIÓN]: No sobrescribir logotipos de emisores existentes
                                     var logoParaActualizar = !string.IsNullOrWhiteSpace(clienteDto.Logo)
                                         ? clienteDto.Logo
                                         : emisorTracked.Logo;
@@ -117,7 +120,7 @@ public class ClienteMigrador : IClienteMigrador
                                         }
                                     }
 
-                                    // Configurar/actualizar firma digital si viene en la BD antigua y es válida
+                                    // [COMENTADO PARA PRODUCCIÓN]: No sobrescribir firmas digitales de emisores existentes
                                     if (!string.IsNullOrWhiteSpace(clienteDto.CertificadoBase64))
                                     {
                                         var certExistenteResult = _certValidator.ValidarCertificado(clienteDto.CertificadoBase64, clienteDto.PasswordCertificado);
@@ -142,6 +145,7 @@ public class ClienteMigrador : IClienteMigrador
                                             _logger.LogWarning("[FIRMA NO CONFIGURADA] Firma en BD antigua no válida para '{Ruc}'. Error: {Error}", rucNormalizado, certExistenteResult.ErrorMensaje);
                                         }
                                     }
+                                    */
 
                                     // Sincronizar datos históricos (facturas, compradores, productos)
                                     await MigrarDatosHistoricosClienteAsync(emisorTracked.TenantId, emisorTracked, clienteDto, clienteDesc, result, cancellationToken);
@@ -169,6 +173,8 @@ public class ClienteMigrador : IClienteMigrador
 
                         if (userExistente != null)
                         {
+                            /*
+                            // [COMENTADO PARA PRODUCCIÓN]: No sobrescribir contraseñas de usuarios existentes
                             if (!string.IsNullOrWhiteSpace(clienteDto.PasswordPlana) && clienteDto.PasswordPlana != "Temporal123*")
                             {
                                 userExistente.PasswordHash = _passwordHasher.HashPassword(userExistente, clienteDto.PasswordPlana);
@@ -178,6 +184,7 @@ public class ClienteMigrador : IClienteMigrador
                                     _logger.LogInformation("[PASSWORD ACTUALIZADO] Se actualizó la contraseña para el usuario existente '{User}' con la clave real del CSV.", userExistente.UserName);
                                 }
                             }
+                            */
 
                             // Corregir logo y firma también si se encontró por usuario existente
                             var emisorUser = await _context.Emisores.FirstOrDefaultAsync(e => e.TenantId == userExistente.TenantId, cancellationToken);
@@ -187,8 +194,10 @@ public class ClienteMigrador : IClienteMigrador
                                 _context.Emisores.Add(emisorUser);
                                 await _context.SaveChangesAsync(cancellationToken);
                             }
+                            /*
                             else
                             {
+                                // [COMENTADO PARA PRODUCCIÓN]: No sobrescribir logotipo ni firma digital
                                 var logoAUsar = !string.IsNullOrWhiteSpace(clienteDto.Logo) ? clienteDto.Logo : emisorUser.Logo;
                                 if (!string.IsNullOrWhiteSpace(logoAUsar))
                                 {
@@ -222,6 +231,7 @@ public class ClienteMigrador : IClienteMigrador
                                     }
                                 }
                             }
+                            */
 
                             // Sincronizar datos históricos (facturas, compradores, productos)
                             await MigrarDatosHistoricosClienteAsync(userExistente.TenantId, emisorUser, clienteDto, clienteDesc, result, cancellationToken);
@@ -488,13 +498,18 @@ public class ClienteMigrador : IClienteMigrador
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
         bool hubieronCompradoresNuevos = false;
-        foreach (var fDto in clienteDto.Facturas)
-        {
-            var compDto = fDto.Comprador;
-            if (compDto == null || string.IsNullOrWhiteSpace(compDto.Identificacion)) continue;
 
+        // Combinar catálogo de compradores directo con compradores de facturas históricas
+        var todosCompradores = clienteDto.Compradores
+            .Concat(clienteDto.Facturas.Select(f => f.Comprador))
+            .Where(c => c != null && !string.IsNullOrWhiteSpace(c.Identificacion));
+
+        foreach (var compDto in todosCompradores)
+        {
             var idLimpia = compDto.Identificacion.Trim();
-            if (!compradoresUnicos.ContainsKey(idLimpia))
+            if (string.IsNullOrWhiteSpace(idLimpia)) continue;
+
+            if (!compradoresUnicos.TryGetValue(idLimpia, out var catExistente))
             {
                 var tipoId = !string.IsNullOrWhiteSpace(compDto.TipoIdentificacion) ? compDto.TipoIdentificacion.Trim() : "07";
                 var razonSoc = !string.IsNullOrWhiteSpace(compDto.RazonSocial) ? compDto.RazonSocial.Trim() : "CONSUMIDOR FINAL";
@@ -504,14 +519,51 @@ public class ClienteMigrador : IClienteMigrador
                     tipoIdentificacion: tipoId.Length <= 2 ? tipoId : "07",
                     identificacion: idLimpia.Length <= 20 ? idLimpia : idLimpia[..20],
                     razonSocial: razonSoc.Length <= 300 ? razonSoc : razonSoc[..300],
-                    direccion: compDto.Direccion,
-                    correoElectronico: compDto.CorreoElectronico);
+                    direccion: compDto.Direccion != null && compDto.Direccion.Length > 300 ? compDto.Direccion[..300] : compDto.Direccion,
+                    correoElectronico: compDto.CorreoElectronico != null && compDto.CorreoElectronico.Length > 300 ? compDto.CorreoElectronico[..300] : compDto.CorreoElectronico);
 
                 compradoresUnicos[idLimpia] = catCliente;
                 _context.CatalogoClientes.Add(catCliente);
                 result.TotalClientesCatalogoCreados++;
                 hubieronCompradoresNuevos = true;
             }
+            /*
+            else
+            {
+                // [COMENTADO PARA PRODUCCIÓN]: No modificar compradores existentes
+                bool modificado = false;
+                var emailActual = catExistente.CorreoElectronico;
+                var dirActual = catExistente.Direccion;
+                var razonActual = catExistente.RazonSocial;
+
+                if (string.IsNullOrWhiteSpace(emailActual) && !string.IsNullOrWhiteSpace(compDto.CorreoElectronico))
+                {
+                    emailActual = compDto.CorreoElectronico.Trim();
+                    if (emailActual.Length > 300) emailActual = emailActual[..300];
+                    modificado = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(dirActual) && !string.IsNullOrWhiteSpace(compDto.Direccion))
+                {
+                    dirActual = compDto.Direccion.Trim();
+                    if (dirActual.Length > 300) dirActual = dirActual[..300];
+                    modificado = true;
+                }
+
+                if (razonActual == "CONSUMIDOR FINAL" && !string.IsNullOrWhiteSpace(compDto.RazonSocial) && compDto.RazonSocial.Trim() != "CONSUMIDOR FINAL")
+                {
+                    razonActual = compDto.RazonSocial.Trim();
+                    if (razonActual.Length > 300) razonActual = razonActual[..300];
+                    modificado = true;
+                }
+
+                if (modificado)
+                {
+                    catExistente.ActualizarContacto(razonActual, dirActual, emailActual);
+                    hubieronCompradoresNuevos = true;
+                }
+            }
+            */
         }
 
         if (hubieronCompradoresNuevos)
@@ -530,53 +582,96 @@ public class ClienteMigrador : IClienteMigrador
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
         bool hubieronProductosNuevos = false;
-        foreach (var fDto in clienteDto.Facturas)
+
+        // Combinar catálogo de productos directo con detalles de facturas históricas
+        var todosProductos = clienteDto.Productos
+            .Concat(clienteDto.Facturas.SelectMany(f => f.Detalles))
+            .Where(d => d != null && !string.IsNullOrWhiteSpace(d.CodigoPrincipal));
+
+        foreach (var detDto in todosProductos)
         {
-            foreach (var detDto in fDto.Detalles)
+            var codPrincipal = !string.IsNullOrWhiteSpace(detDto.CodigoPrincipal) ? detDto.CodigoPrincipal.Trim() : "";
+            if (string.IsNullOrWhiteSpace(codPrincipal)) continue;
+            if (codPrincipal.Length > 25) codPrincipal = codPrincipal[..25];
+
+            if (!productosUnicos.TryGetValue(codPrincipal, out var prodExistente))
             {
-                var codPrincipal = !string.IsNullOrWhiteSpace(detDto.CodigoPrincipal) ? detDto.CodigoPrincipal.Trim() : "";
-                if (string.IsNullOrWhiteSpace(codPrincipal)) continue;
-                if (codPrincipal.Length > 25) codPrincipal = codPrincipal[..25];
+                var desc = !string.IsNullOrWhiteSpace(detDto.Descripcion) ? detDto.Descripcion.Trim() : "Item de Factura";
+                if (desc.Length > 300) desc = desc[..300];
 
-                if (!productosUnicos.ContainsKey(codPrincipal))
+                var precio = detDto.PrecioUnitario >= 0 ? detDto.PrecioUnitario : 0m;
+                var primerImp = detDto.Impuestos.FirstOrDefault();
+                var codImp = !string.IsNullOrWhiteSpace(primerImp?.Codigo) ? primerImp.Codigo.Trim() : "2";
+                var codPorc = !string.IsNullOrWhiteSpace(primerImp?.CodigoPorcentaje) ? primerImp.CodigoPorcentaje.Trim() : "4";
+                var tarifa = primerImp != null && primerImp.Tarifa >= 0 ? primerImp.Tarifa : 15.00m;
+
+                try
                 {
-                    var desc = !string.IsNullOrWhiteSpace(detDto.Descripcion) ? detDto.Descripcion.Trim() : "Item de Factura";
-                    if (desc.Length > 300) desc = desc[..300];
+                    var catProd = CatalogoProducto.Crear(
+                        tenantId: tenantId,
+                        codigoPrincipal: codPrincipal,
+                        descripcion: desc,
+                        precioUnitario: precio,
+                        codigoImpuesto: codImp.Length <= 10 ? codImp : codImp[..10],
+                        codigoPorcentaje: codPorc.Length <= 10 ? codPorc : codPorc[..10],
+                        tarifa: tarifa);
 
-                    var precio = detDto.PrecioUnitario >= 0 ? detDto.PrecioUnitario : 0m;
-                    var primerImp = detDto.Impuestos.FirstOrDefault();
-                    var codImp = !string.IsNullOrWhiteSpace(primerImp?.Codigo) ? primerImp.Codigo.Trim() : "2";
-                    var codPorc = !string.IsNullOrWhiteSpace(primerImp?.CodigoPorcentaje) ? primerImp.CodigoPorcentaje.Trim() : "4";
-                    var tarifa = primerImp != null && primerImp.Tarifa >= 0 ? primerImp.Tarifa : 15.00m;
-
-                    try
-                    {
-                        var catProd = CatalogoProducto.Crear(
-                            tenantId: tenantId,
-                            codigoPrincipal: codPrincipal,
-                            descripcion: desc,
-                            precioUnitario: precio,
-                            codigoImpuesto: codImp.Length <= 10 ? codImp : codImp[..10],
-                            codigoPorcentaje: codPorc.Length <= 10 ? codPorc : codPorc[..10],
-                            tarifa: tarifa);
-
-                        productosUnicos[codPrincipal] = catProd;
-                        _context.CatalogoProductos.Add(catProd);
-                        result.TotalProductosCatalogoCreados++;
-                        hubieronProductosNuevos = true;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning("No se pudo agregar producto '{Cod}' al catálogo para {Desc}: {Msg}", codPrincipal, clienteDesc, ex.Message);
-                    }
+                    productosUnicos[codPrincipal] = catProd;
+                    _context.CatalogoProductos.Add(catProd);
+                    result.TotalProductosCatalogoCreados++;
+                    hubieronProductosNuevos = true;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning("No se pudo agregar producto '{Cod}' al catálogo para {Desc}: {Msg}", codPrincipal, clienteDesc, ex.Message);
                 }
             }
+            /*
+            else
+            {
+                // [COMENTADO PARA PRODUCCIÓN]: No modificar productos existentes
+                bool modificado = false;
+                var descActual = prodExistente.Descripcion;
+                var precioActual = prodExistente.PrecioUnitario;
+
+                if ((descActual == "Item de Factura" || descActual == "ITEM") && !string.IsNullOrWhiteSpace(detDto.Descripcion) && detDto.Descripcion != "Item de Factura")
+                {
+                    descActual = detDto.Descripcion.Trim();
+                    if (descActual.Length > 300) descActual = descActual[..300];
+                    modificado = true;
+                }
+
+                if (precioActual == 0m && detDto.PrecioUnitario > 0m)
+                {
+                    precioActual = detDto.PrecioUnitario;
+                    modificado = true;
+                }
+
+                if (modificado)
+                {
+                    prodExistente.ActualizarDatos(
+                        descActual,
+                        precioActual,
+                        prodExistente.CodigoImpuesto,
+                        prodExistente.CodigoPorcentaje,
+                        prodExistente.Tarifa);
+                    hubieronProductosNuevos = true;
+                }
+            }
+            */
         }
 
         if (hubieronProductosNuevos)
         {
             await _context.SaveChangesAsync(cancellationToken);
         }
+
+        /*
+        // =========================================================================
+        // [COMENTADO PARA PRODUCCIÓN]:
+        // No procesar facturas históricas ni actualizar correlativo del emisor.
+        // La migración se ejecuta exclusivamente para insertar compradores y productos faltantes.
+        // =========================================================================
 
         // 3. FACTURAS HISTÓRICAS
         var facturasExistentesClaves = new HashSet<string>(
@@ -769,5 +864,6 @@ public class ClienteMigrador : IClienteMigrador
 
             await _context.SaveChangesAsync(cancellationToken);
         }
+        */
     }
 }

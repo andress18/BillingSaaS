@@ -48,6 +48,12 @@ public class ClienteMigracionDto
     // 5. HISTORIAL DE FACTURAS EMITIDAS
     // ==========================================
     public List<FacturaMigracionDto> Facturas { get; set; } = new();
+
+    // ==========================================
+    // 6. CATÁLOGOS BASE (Compradores y Productos del sistema anterior)
+    // ==========================================
+    public List<CompradorMigracionDto> Compradores { get; set; } = new();
+    public List<DetalleFacturaMigracionDto> Productos { get; set; } = new();
 }
 
 public class FacturaMigracionDto

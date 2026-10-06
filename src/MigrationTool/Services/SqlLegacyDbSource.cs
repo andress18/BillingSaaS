@@ -336,7 +336,13 @@ public class SqlLegacyDbSource : IClienteMigracionSource
                 _logger.LogInformation("Se leyeron y parsearon {DocsCount} comprobantes XML asociados a los clientes.", docsLeidos);
             }
 
-            // 3. Enriquecer datos tributarios de cada cliente a partir de sus XMLs
+            // 3. Extraer catálogo de compradores directos (clientes que tal vez nunca tuvieron facturas)
+            await ExtraerCompradoresDirectosAsync(connection, legacyAppTables, usuariosMap, cancellationToken);
+
+            // 4. Extraer catálogo de productos y servicios directos (items que tal vez nunca tuvieron facturas)
+            await ExtraerProductosDirectosAsync(connection, legacyAppTables, usuariosMap, cancellationToken);
+
+            // 5. Enriquecer datos tributarios de cada cliente a partir de sus XMLs
             foreach (var cliente in clientes)
             {
                 _xmlParser.EnriquecerEmisorDesdeFacturas(cliente);
@@ -349,5 +355,403 @@ public class SqlLegacyDbSource : IClienteMigracionSource
         }
 
         return clientes;
+    }
+
+    private async Task ExtraerCompradoresDirectosAsync(
+        SqlConnection connection,
+        List<string> legacyAppTables,
+        Dictionary<Guid, ClienteMigracionDto> usuariosMap,
+        CancellationToken cancellationToken)
+    {
+        var clientTableCandidates = new[]
+        {
+            "AppClients", "AppCustomers", "AppClientes", "AppCompradores", "AppReceptors",
+            "AppReceptores", "AppBuyers", "AppClient", "AppCustomer", "AppCliente",
+            "AppComprador", "AppReceptor", "AppBuyer"
+        };
+
+        var detectedClientTables = new List<string>();
+        foreach (var cand in clientTableCandidates)
+        {
+            var match = legacyAppTables.FirstOrDefault(t => string.Equals(t, cand, StringComparison.OrdinalIgnoreCase));
+            if (match != null && !detectedClientTables.Contains(match, StringComparer.OrdinalIgnoreCase))
+            {
+                detectedClientTables.Add(match);
+            }
+        }
+
+        if (detectedClientTables.Count == 0)
+        {
+            var fuzzy = legacyAppTables.Where(t =>
+                t.Contains("Client", StringComparison.OrdinalIgnoreCase) ||
+                t.Contains("Customer", StringComparison.OrdinalIgnoreCase) ||
+                t.Contains("Comprador", StringComparison.OrdinalIgnoreCase) ||
+                t.Contains("Receptor", StringComparison.OrdinalIgnoreCase)).ToList();
+
+            detectedClientTables.AddRange(fuzzy);
+        }
+
+        if (detectedClientTables.Count == 0)
+        {
+            _logger.LogInformation("No se detectó tabla específica de clientes/compradores en LegacyDb. Se usarán únicamente compradores de facturas.");
+            return;
+        }
+
+        int totalCompradoresExtraidos = 0;
+        foreach (var clientTableName in detectedClientTables)
+        {
+            _logger.LogInformation("Analizando tabla de compradores: '{Table}'...", clientTableName);
+
+            var clientCols = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            using (var cmdCols = new SqlCommand("SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @TableName;", connection))
+            {
+                cmdCols.Parameters.AddWithValue("@TableName", clientTableName);
+                using var rCols = await cmdCols.ExecuteReaderAsync(cancellationToken);
+                while (await rCols.ReadAsync(cancellationToken))
+                {
+                    clientCols[rCols.GetString(0)] = rCols.GetString(1);
+                }
+            }
+
+            var colUser = BuscarColumna(clientCols, "CreatorUserId", "CreatorId", "UserId", "AppUserId", "OwnerId");
+            var colIdent = BuscarColumna(clientCols, "IdentificacionComprador", "Identification", "Identificacion", "Ruc", "Cedula", "NumeroIdentificacion", "DocumentNumber", "IdNumber", "Ci", "RucCedula", "Dni");
+            var colName = BuscarColumna(clientCols, "RazonSocialComprador", "Name", "RazonSocial", "FullName", "BusinessName", "Nombre", "Descripcion", "ClientName", "CustomerName", "NombreComercial");
+            var colTipoId = BuscarColumna(clientCols, "TipoIdentificacionComprador", "IdentificationType", "TipoIdentificacion", "DocType", "TipoDocumento", "Type", "TipoId");
+            var colEmail = BuscarColumna(clientCols, "Correo", "Email", "EmailAddress", "CorreoElectronico", "Mail");
+            var colAddress = BuscarColumna(clientCols, "DireccionComprador", "Address", "Direccion", "AddressLine", "Dir", "DireccionMatriz", "DireccionCliente");
+            var colDeleted = BuscarColumna(clientCols, "IsDeleted", "Deleted", "EstaEliminado");
+
+            if (colUser == null || colIdent == null)
+            {
+                _logger.LogWarning("La tabla '{Table}' no tiene columnas mínimas para identificar usuario y comprador ({ColUser}, {ColIdent}). Se omite.",
+                    clientTableName, colUser ?? "NO ENCONTRADA", colIdent ?? "NO ENCONTRADA");
+                continue;
+            }
+
+            string selectClause = $@"
+                SELECT 
+                    [{colUser}] AS CreatorId,
+                    [{colIdent}] AS Identificacion,
+                    {(colName != null ? $"[{colName}]" : "''")} AS RazonSocial,
+                    {(colTipoId != null ? $"[{colTipoId}]" : "NULL")} AS TipoIdentificacion,
+                    {(colEmail != null ? $"[{colEmail}]" : "NULL")} AS CorreoElectronico,
+                    {(colAddress != null ? $"[{colAddress}]" : "NULL")} AS Direccion
+                FROM [{clientTableName}]
+                WHERE {(colDeleted != null ? $"[{colDeleted}] = 0 AND " : "")} [{colUser}] IS NOT NULL AND [{colIdent}] IS NOT NULL;
+            ";
+
+            using var cmd = new SqlCommand(selectClause, connection);
+            cmd.CommandTimeout = 120;
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            int compradoresDeEstaTabla = 0;
+
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                if (reader.IsDBNull(reader.GetOrdinal("CreatorId"))) continue;
+                var rawCreator = reader["CreatorId"];
+                Guid creatorId;
+                if (rawCreator is Guid g) creatorId = g;
+                else if (rawCreator is string s && Guid.TryParse(s, out var parsedG)) creatorId = parsedG;
+                else continue;
+
+                if (!usuariosMap.TryGetValue(creatorId, out var clienteDto)) continue;
+
+                var rawIdent = reader.IsDBNull(reader.GetOrdinal("Identificacion")) ? "" : reader["Identificacion"].ToString()?.Trim() ?? "";
+                if (string.IsNullOrWhiteSpace(rawIdent)) continue;
+
+                var rawName = reader.IsDBNull(reader.GetOrdinal("RazonSocial")) ? "" : reader["RazonSocial"].ToString()?.Trim() ?? "";
+                var rawTipoId = reader.IsDBNull(reader.GetOrdinal("TipoIdentificacion")) ? null : reader["TipoIdentificacion"].ToString()?.Trim();
+                var rawEmail = reader.IsDBNull(reader.GetOrdinal("CorreoElectronico")) ? null : reader["CorreoElectronico"].ToString()?.Trim();
+                var rawAddress = reader.IsDBNull(reader.GetOrdinal("Direccion")) ? null : reader["Direccion"].ToString()?.Trim();
+
+                var tipoIdNormalizado = NormalizarTipoIdentificacion(rawTipoId, rawIdent);
+
+                clienteDto.Compradores.Add(new CompradorMigracionDto
+                {
+                    TipoIdentificacion = tipoIdNormalizado,
+                    Identificacion = rawIdent.Length <= 20 ? rawIdent : rawIdent[..20],
+                    RazonSocial = !string.IsNullOrWhiteSpace(rawName)
+                        ? (rawName.Length <= 300 ? rawName : rawName[..300])
+                        : (tipoIdNormalizado == "07" ? "CONSUMIDOR FINAL" : rawIdent),
+                    CorreoElectronico = !string.IsNullOrWhiteSpace(rawEmail)
+                        ? (rawEmail.Length <= 300 ? rawEmail : rawEmail[..300])
+                        : null,
+                    Direccion = !string.IsNullOrWhiteSpace(rawAddress)
+                        ? (rawAddress.Length <= 300 ? rawAddress : rawAddress[..300])
+                        : null
+                });
+
+                compradoresDeEstaTabla++;
+                totalCompradoresExtraidos++;
+            }
+
+            _logger.LogInformation("Se extrajeron {Count} compradores directos desde '{Table}'.", compradoresDeEstaTabla, clientTableName);
+        }
+
+        _logger.LogInformation("Total de compradores directos extraídos de catálogos LegacyDb: {Total}.", totalCompradoresExtraidos);
+    }
+
+    private async Task ExtraerProductosDirectosAsync(
+        SqlConnection connection,
+        List<string> legacyAppTables,
+        Dictionary<Guid, ClienteMigracionDto> usuariosMap,
+        CancellationToken cancellationToken)
+    {
+        var prodTableCandidates = new[]
+        {
+            "AppDetails", "AppProducts", "AppItems", "AppProductos", "AppServices", "AppServicios",
+            "AppArticulos", "AppMercaderias", "AppProduct", "AppItem", "AppProducto",
+            "AppService", "AppServicio", "AppArticulo"
+        };
+
+        var detectedProdTables = new List<string>();
+        foreach (var cand in prodTableCandidates)
+        {
+            var match = legacyAppTables.FirstOrDefault(t => string.Equals(t, cand, StringComparison.OrdinalIgnoreCase));
+            if (match != null && !detectedProdTables.Contains(match, StringComparer.OrdinalIgnoreCase))
+            {
+                detectedProdTables.Add(match);
+            }
+        }
+
+        if (detectedProdTables.Count == 0)
+        {
+            var fuzzy = legacyAppTables.Where(t =>
+                t.Contains("Detail", StringComparison.OrdinalIgnoreCase) ||
+                t.Contains("Product", StringComparison.OrdinalIgnoreCase) ||
+                t.Contains("Item", StringComparison.OrdinalIgnoreCase) ||
+                t.Contains("Producto", StringComparison.OrdinalIgnoreCase) ||
+                t.Contains("Articulo", StringComparison.OrdinalIgnoreCase) ||
+                t.Contains("Servic", StringComparison.OrdinalIgnoreCase)).ToList();
+
+            detectedProdTables.AddRange(fuzzy);
+        }
+
+        if (detectedProdTables.Count == 0)
+        {
+            _logger.LogInformation("No se detectó tabla específica de productos/servicios en LegacyDb. Se usarán únicamente productos de facturas.");
+            return;
+        }
+
+        int totalProductosExtraidos = 0;
+        int autoCodeCounter = 1;
+
+        foreach (var prodTableName in detectedProdTables)
+        {
+            _logger.LogInformation("Analizando tabla de productos/servicios: '{Table}'...", prodTableName);
+
+            var prodCols = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            using (var cmdCols = new SqlCommand("SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @TableName;", connection))
+            {
+                cmdCols.Parameters.AddWithValue("@TableName", prodTableName);
+                using var rCols = await cmdCols.ExecuteReaderAsync(cancellationToken);
+                while (await rCols.ReadAsync(cancellationToken))
+                {
+                    prodCols[rCols.GetString(0)] = rCols.GetString(1);
+                }
+            }
+
+            var colId = BuscarColumna(prodCols, "Id");
+            var colUser = BuscarColumna(prodCols, "CreatorUserId", "CreatorId", "UserId", "AppUserId", "OwnerId");
+            var colCode = BuscarColumna(prodCols, "CodigoAuxiliar", "Code", "Codigo", "CodigoPrincipal", "ItemCode", "ProductCode", "Sku", "MainCode", "CodigoInterno", "Reference");
+            var colName = BuscarColumna(prodCols, "Nombre", "Name", "Descripcion", "Description", "ProductName", "ItemName", "Detalle", "Title");
+            var colPrice = BuscarColumna(prodCols, "Precio", "Price", "UnitPrice", "PrecioUnitario", "Cost", "Valor", "PrecioVenta", "UnitCost", "Price1");
+            var colTaxRateCode = BuscarColumna(prodCols, "CodigoPorcentaje", "TaxPercentageCode", "PorcentajeCodigo", "IvaCodigo", "CodigoIva");
+            var colTaxCode = BuscarColumna(prodCols, "CodigoImpuesto", "TaxCode", "ImpuestoCodigo");
+            var colTaxRate = BuscarColumna(prodCols, "Tarifa", "TaxRate", "PorcentajeIva", "Porcentaje", "IvaRate", "Iva", "Tax", "TarifaIva");
+            var colDeleted = BuscarColumna(prodCols, "IsDeleted", "Deleted", "EstaEliminado");
+
+            if (colUser == null || (colCode == null && colName == null))
+            {
+                _logger.LogWarning("La tabla '{Table}' no tiene columnas mínimas para identificar usuario y producto ({ColUser}, {ColItem}). Se omite.",
+                    prodTableName, colUser ?? "NO ENCONTRADA", colCode ?? colName ?? "NO ENCONTRADA");
+                continue;
+            }
+
+            string selectClause = $@"
+                SELECT 
+                    {(colId != null ? $"[{colId}]" : "NULL")} AS ItemId,
+                    [{colUser}] AS CreatorId,
+                    {(colCode != null ? $"[{colCode}]" : "''")} AS CodigoPrincipal,
+                    {(colName != null ? $"[{colName}]" : "''")} AS Descripcion,
+                    {(colPrice != null ? $"[{colPrice}]" : "0")} AS PrecioUnitario,
+                    {(colTaxRate != null ? $"[{colTaxRate}]" : "NULL")} AS Tarifa,
+                    {(colTaxRateCode != null ? $"[{colTaxRateCode}]" : "NULL")} AS CodigoPorcentaje,
+                    {(colTaxCode != null ? $"[{colTaxCode}]" : "NULL")} AS CodigoImpuesto
+                FROM [{prodTableName}]
+                WHERE {(colDeleted != null ? $"[{colDeleted}] = 0 AND " : "")} [{colUser}] IS NOT NULL;
+            ";
+
+            using var cmd = new SqlCommand(selectClause, connection);
+            cmd.CommandTimeout = 120;
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            int productosDeEstaTabla = 0;
+
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                if (reader.IsDBNull(reader.GetOrdinal("CreatorId"))) continue;
+                var rawCreator = reader["CreatorId"];
+                Guid creatorId;
+                if (rawCreator is Guid g) creatorId = g;
+                else if (rawCreator is string s && Guid.TryParse(s, out var parsedG)) creatorId = parsedG;
+                else continue;
+
+                if (!usuariosMap.TryGetValue(creatorId, out var clienteDto)) continue;
+
+                var rawCode = reader.IsDBNull(reader.GetOrdinal("CodigoPrincipal")) ? "" : reader["CodigoPrincipal"].ToString()?.Trim() ?? "";
+                var rawDesc = reader.IsDBNull(reader.GetOrdinal("Descripcion")) ? "" : reader["Descripcion"].ToString()?.Trim() ?? "";
+
+                if (string.IsNullOrWhiteSpace(rawCode) && string.IsNullOrWhiteSpace(rawDesc)) continue;
+
+                if (string.IsNullOrWhiteSpace(rawCode))
+                {
+                    if (!reader.IsDBNull(reader.GetOrdinal("ItemId")))
+                    {
+                        var rawIdObj = reader["ItemId"];
+                        if (rawIdObj is Guid itemIdGuid)
+                        {
+                            rawCode = $"D-{itemIdGuid.ToString("N")[..8].ToUpperInvariant()}";
+                        }
+                        else
+                        {
+                            rawCode = $"PROD-{autoCodeCounter++:D4}";
+                        }
+                    }
+                    else
+                    {
+                        rawCode = $"PROD-{autoCodeCounter++:D4}";
+                    }
+                }
+                if (string.IsNullOrWhiteSpace(rawDesc))
+                {
+                    rawDesc = rawCode;
+                }
+
+                decimal precio = 0m;
+                if (!reader.IsDBNull(reader.GetOrdinal("PrecioUnitario")))
+                {
+                    var priceObj = reader["PrecioUnitario"];
+                    if (priceObj is decimal d) precio = d;
+                    else if (priceObj is double dbl) precio = (decimal)dbl;
+                    else if (priceObj is float flt) precio = (decimal)flt;
+                    else if (decimal.TryParse(priceObj.ToString(), out var dp)) precio = dp;
+                }
+                if (precio < 0m) precio = 0m;
+
+                decimal? rawTarifa = null;
+                if (!reader.IsDBNull(reader.GetOrdinal("Tarifa")))
+                {
+                    var tObj = reader["Tarifa"];
+                    if (tObj is decimal td) rawTarifa = td;
+                    else if (tObj is double tdbl) rawTarifa = (decimal)tdbl;
+                    else if (decimal.TryParse(tObj.ToString(), out var tdp)) rawTarifa = tdp;
+                }
+
+                var rawCodPorc = reader.IsDBNull(reader.GetOrdinal("CodigoPorcentaje")) ? null : reader["CodigoPorcentaje"].ToString()?.Trim();
+                var rawCodImp = reader.IsDBNull(reader.GetOrdinal("CodigoImpuesto")) ? "2" : reader["CodigoImpuesto"].ToString()?.Trim() ?? "2";
+
+                var (codPorcFinal, tarifaFinal) = DeterminarIva(rawCodPorc, rawTarifa);
+
+                var prodDto = new DetalleFacturaMigracionDto
+                {
+                    CodigoPrincipal = rawCode.Length <= 25 ? rawCode : rawCode[..25],
+                    Descripcion = rawDesc.Length <= 300 ? rawDesc : rawDesc[..300],
+                    Cantidad = 1m,
+                    PrecioUnitario = precio,
+                    Descuento = 0m,
+                    Impuestos = new List<ImpuestoMigracionDto>
+                    {
+                        new ImpuestoMigracionDto
+                        {
+                            Codigo = string.IsNullOrWhiteSpace(rawCodImp) ? "2" : rawCodImp,
+                            CodigoPorcentaje = codPorcFinal,
+                            Tarifa = tarifaFinal,
+                            BaseImponible = precio,
+                            Valor = Math.Round(precio * (tarifaFinal / 100m), 2, MidpointRounding.AwayFromZero)
+                        }
+                    }
+                };
+
+                clienteDto.Productos.Add(prodDto);
+                productosDeEstaTabla++;
+                totalProductosExtraidos++;
+            }
+
+            _logger.LogInformation("Se extrajeron {Count} productos/servicios directos desde '{Table}'.", productosDeEstaTabla, prodTableName);
+        }
+
+        _logger.LogInformation("Total de productos/servicios directos extraídos de catálogos LegacyDb: {Total}.", totalProductosExtraidos);
+    }
+
+    public static string? BuscarColumna(Dictionary<string, string> columnas, params string[] candidatos)
+    {
+        foreach (var c in candidatos)
+        {
+            foreach (var key in columnas.Keys)
+            {
+                if (string.Equals(key, c, StringComparison.OrdinalIgnoreCase))
+                    return key;
+            }
+        }
+        return null;
+    }
+
+    public static string NormalizarTipoIdentificacion(string? rawTipoId, string identificacion)
+    {
+        var trimmed = rawTipoId?.Trim().ToUpperInvariant();
+        if (!string.IsNullOrWhiteSpace(trimmed))
+        {
+            if (trimmed is "04" or "05" or "06" or "07" or "08")
+                return trimmed;
+
+            if (trimmed.Contains("RUC")) return "04";
+            if (trimmed.Contains("CEDULA") || trimmed.Contains("CÉDULA")) return "05";
+            if (trimmed.Contains("PASAPORTE")) return "06";
+            if (trimmed.Contains("CONSUMIDOR") || trimmed.Contains("FINAL")) return "07";
+            if (trimmed.Contains("EXTERIOR")) return "08";
+        }
+
+        var idLimpia = identificacion.Trim();
+        if (idLimpia == "9999999999999") return "07";
+        if (idLimpia.Length == 13 && idLimpia.All(char.IsDigit)) return "04";
+        if (idLimpia.Length == 10 && idLimpia.All(char.IsDigit)) return "05";
+
+        return "07";
+    }
+
+    public static (string CodigoPorcentaje, decimal Tarifa) DeterminarIva(string? rawCodPorcentaje, decimal? rawTarifa)
+    {
+        // Si viene tarifa como fracción decimal (ej: 0.15 o 0.12)
+        if (rawTarifa is > 0 and <= 1)
+        {
+            rawTarifa *= 100m;
+        }
+
+        if (!string.IsNullOrWhiteSpace(rawCodPorcentaje))
+        {
+            var cp = rawCodPorcentaje.Trim();
+            if (cp == "4") return ("4", rawTarifa ?? 15.00m);
+            if (cp == "2") return ("2", rawTarifa ?? 12.00m);
+            if (cp == "0") return ("0", 0.00m);
+            if (cp == "5") return ("5", rawTarifa ?? 5.00m);
+            if (cp == "10") return ("10", rawTarifa ?? 13.00m);
+            if (cp == "3") return ("3", rawTarifa ?? 14.00m);
+            return (cp, rawTarifa ?? 15.00m);
+        }
+
+        if (rawTarifa.HasValue)
+        {
+            var t = Math.Round(rawTarifa.Value, 2);
+            if (t == 15.00m) return ("4", 15.00m);
+            if (t == 12.00m) return ("2", 12.00m);
+            if (t == 0.00m) return ("0", 0.00m);
+            if (t == 5.00m) return ("5", 5.00m);
+            if (t == 13.00m) return ("10", 13.00m);
+            if (t == 14.00m) return ("3", 14.00m);
+            return ("4", t);
+        }
+
+        // Tarifa por defecto vigente en SRI Ecuador: 15% (código 4)
+        return ("4", 15.00m);
     }
 }

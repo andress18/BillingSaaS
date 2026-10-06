@@ -169,4 +169,152 @@ public class MigrationToolServicesTests
         res.ErrorMensaje.ShouldNotBeNull();
         res.ErrorMensaje!.ShouldContain("Base64");
     }
+
+    [Test]
+    public void NormalizarTipoIdentificacion_CasosDiversos_DebeMapearCorrectamente()
+    {
+        // Códigos directos
+        SqlLegacyDbSource.NormalizarTipoIdentificacion("04", "1790016919001").ShouldBe("04");
+        SqlLegacyDbSource.NormalizarTipoIdentificacion("05", "1712345678").ShouldBe("05");
+        SqlLegacyDbSource.NormalizarTipoIdentificacion("06", "A12345678").ShouldBe("06");
+        SqlLegacyDbSource.NormalizarTipoIdentificacion("07", "9999999999999").ShouldBe("07");
+        SqlLegacyDbSource.NormalizarTipoIdentificacion("08", "EXT-12345").ShouldBe("08");
+
+        // Por texto descriptivo
+        SqlLegacyDbSource.NormalizarTipoIdentificacion("RUC", "1790016919001").ShouldBe("04");
+        SqlLegacyDbSource.NormalizarTipoIdentificacion("Cédula", "1712345678").ShouldBe("05");
+        SqlLegacyDbSource.NormalizarTipoIdentificacion("CEDULA", "1712345678").ShouldBe("05");
+        SqlLegacyDbSource.NormalizarTipoIdentificacion("Pasaporte", "PASS123").ShouldBe("06");
+        SqlLegacyDbSource.NormalizarTipoIdentificacion("Consumidor Final", "9999999999999").ShouldBe("07");
+
+        // Inferir por número de identificación si tipo es nulo
+        SqlLegacyDbSource.NormalizarTipoIdentificacion(null, "1790016919001").ShouldBe("04");
+        SqlLegacyDbSource.NormalizarTipoIdentificacion(null, "1712345678").ShouldBe("05");
+        SqlLegacyDbSource.NormalizarTipoIdentificacion(null, "9999999999999").ShouldBe("07");
+    }
+
+    [Test]
+    public void DeterminarIva_CasosDiversos_DebeCalcularCodigoYTarifaCorrectos()
+    {
+        // Por código de porcentaje
+        var res4 = SqlLegacyDbSource.DeterminarIva("4", null);
+        res4.CodigoPorcentaje.ShouldBe("4");
+        res4.Tarifa.ShouldBe(15.00m);
+
+        var res2 = SqlLegacyDbSource.DeterminarIva("2", null);
+        res2.CodigoPorcentaje.ShouldBe("2");
+        res2.Tarifa.ShouldBe(12.00m);
+
+        var res0 = SqlLegacyDbSource.DeterminarIva("0", null);
+        res0.CodigoPorcentaje.ShouldBe("0");
+        res0.Tarifa.ShouldBe(0.00m);
+
+        // Por tarifa numérica directa
+        var resTarifa15 = SqlLegacyDbSource.DeterminarIva(null, 15.00m);
+        resTarifa15.CodigoPorcentaje.ShouldBe("4");
+        resTarifa15.Tarifa.ShouldBe(15.00m);
+
+        var resTarifa12 = SqlLegacyDbSource.DeterminarIva(null, 12.00m);
+        resTarifa12.CodigoPorcentaje.ShouldBe("2");
+        resTarifa12.Tarifa.ShouldBe(12.00m);
+
+        // Tarifa como fracción decimal (0.15 => 15%)
+        var resFraccion = SqlLegacyDbSource.DeterminarIva(null, 0.15m);
+        resFraccion.CodigoPorcentaje.ShouldBe("4");
+        resFraccion.Tarifa.ShouldBe(15.00m);
+
+        // Valor por defecto sin parámetros
+        var resDef = SqlLegacyDbSource.DeterminarIva(null, null);
+        resDef.CodigoPorcentaje.ShouldBe("4");
+        resDef.Tarifa.ShouldBe(15.00m);
+    }
+
+    [Test]
+    public void BuscarColumna_DiccionarioConColumnas_DebeBuscarCaseInsensitive()
+    {
+        var columnas = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["creatorid"] = "uniqueidentifier",
+            ["precio_unitario"] = "decimal",
+            ["RazonSocial"] = "nvarchar"
+        };
+
+        SqlLegacyDbSource.BuscarColumna(columnas, "CreatorUserId", "CreatorId").ShouldBe("creatorid");
+        SqlLegacyDbSource.BuscarColumna(columnas, "Name", "RazonSocial").ShouldBe("RazonSocial");
+        SqlLegacyDbSource.BuscarColumna(columnas, "Inexistente", "Otra").ShouldBeNull();
+    }
+
+    [Test]
+    public void ClienteMigracionDto_DebeSoportarColeccionesDeCompradoresYProductosDirectos()
+    {
+        var dto = new ClienteMigracionDto();
+        dto.Compradores.ShouldNotBeNull();
+        dto.Compradores.ShouldBeEmpty();
+        dto.Productos.ShouldNotBeNull();
+        dto.Productos.ShouldBeEmpty();
+
+        dto.Compradores.Add(new CompradorMigracionDto
+        {
+            TipoIdentificacion = "04",
+            Identificacion = "1790016919001",
+            RazonSocial = "CLIENTE DIRECTO S.A.",
+            CorreoElectronico = "cliente@directo.com"
+        });
+
+        dto.Productos.Add(new DetalleFacturaMigracionDto
+        {
+            CodigoPrincipal = "PROD-DIR-01",
+            Descripcion = "PRODUCTO DIRECTO CATALOGO",
+            PrecioUnitario = 45.50m
+        });
+
+        dto.Compradores.Count.ShouldBe(1);
+        dto.Productos.Count.ShouldBe(1);
+        dto.Compradores[0].RazonSocial.ShouldBe("CLIENTE DIRECTO S.A.");
+        dto.Productos[0].CodigoPrincipal.ShouldBe("PROD-DIR-01");
+    }
+
+    [Test]
+    public void SqlLegacyDbSource_DebeDetectarColumnasExactasDeAppClientsYAppDetails()
+    {
+        var appClientsCols = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Id"] = "uniqueidentifier",
+            ["CreatorUserId"] = "uniqueidentifier",
+            ["TipoIdentificacionComprador"] = "nvarchar",
+            ["RazonSocialComprador"] = "nvarchar",
+            ["IdentificacionComprador"] = "nvarchar",
+            ["DireccionComprador"] = "nvarchar",
+            ["ContribuyenteRimpe"] = "bit",
+            ["Correo"] = "nvarchar",
+            ["IsDeleted"] = "bit"
+        };
+
+        SqlLegacyDbSource.BuscarColumna(appClientsCols, "CreatorUserId", "CreatorId", "UserId").ShouldBe("CreatorUserId");
+        SqlLegacyDbSource.BuscarColumna(appClientsCols, "IdentificacionComprador", "Identification").ShouldBe("IdentificacionComprador");
+        SqlLegacyDbSource.BuscarColumna(appClientsCols, "RazonSocialComprador", "Name").ShouldBe("RazonSocialComprador");
+        SqlLegacyDbSource.BuscarColumna(appClientsCols, "TipoIdentificacionComprador", "IdentificationType").ShouldBe("TipoIdentificacionComprador");
+        SqlLegacyDbSource.BuscarColumna(appClientsCols, "Correo", "Email").ShouldBe("Correo");
+        SqlLegacyDbSource.BuscarColumna(appClientsCols, "DireccionComprador", "Address").ShouldBe("DireccionComprador");
+
+        var appDetailsCols = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Id"] = "uniqueidentifier",
+            ["CreatorUserId"] = "uniqueidentifier",
+            ["Nombre"] = "nvarchar",
+            ["Precio"] = "decimal",
+            ["CodigoPorcentaje"] = "tinyint",
+            ["CodigoImpuesto"] = "tinyint",
+            ["CodigoAuxiliar"] = "nvarchar",
+            ["IsDeleted"] = "bit"
+        };
+
+        SqlLegacyDbSource.BuscarColumna(appDetailsCols, "Id").ShouldBe("Id");
+        SqlLegacyDbSource.BuscarColumna(appDetailsCols, "CreatorUserId", "CreatorId", "UserId").ShouldBe("CreatorUserId");
+        SqlLegacyDbSource.BuscarColumna(appDetailsCols, "CodigoAuxiliar", "Code").ShouldBe("CodigoAuxiliar");
+        SqlLegacyDbSource.BuscarColumna(appDetailsCols, "Nombre", "Name").ShouldBe("Nombre");
+        SqlLegacyDbSource.BuscarColumna(appDetailsCols, "Precio", "Price").ShouldBe("Precio");
+        SqlLegacyDbSource.BuscarColumna(appDetailsCols, "CodigoPorcentaje", "TaxPercentageCode").ShouldBe("CodigoPorcentaje");
+        SqlLegacyDbSource.BuscarColumna(appDetailsCols, "CodigoImpuesto", "TaxCode").ShouldBe("CodigoImpuesto");
+    }
 }
