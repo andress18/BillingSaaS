@@ -17,6 +17,7 @@
 mono_crash.*
 
 # Build results
+src\MigrationTool
 tools/
 [Dd]ebug/
 [Dd]ebugPublic/

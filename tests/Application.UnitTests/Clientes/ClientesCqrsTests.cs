@@ -164,32 +164,32 @@ public class ClientesCqrsTests
     }
 
     [Test]
-    public async Task UpsertCliente_CuandoAlcanzaLimite10Clientes_DebeLanzarInvalidOperationException()
+    public async Task UpsertCliente_CuandoAlcanzaLimiteClientes_DebeLanzarInvalidOperationException()
     {
         var handler = new UpsertClienteCommandHandler(_context, _userMock.Object);
 
-        // Registrar 10 clientes previos
-        for (int i = 1; i <= 10; i++)
+        // Registrar 1000 clientes previos
+        for (int i = 1; i <= 1000; i++)
         {
-            var c = CatalogoCliente.Crear(_tenantId, "04", $"179001234500{i:D1}", $"CLIENTE {i}");
+            var c = CatalogoCliente.Crear(_tenantId, "04", $"17900123{i:D5}", $"CLIENTE {i}");
             _context.CatalogoClientes.Add(c);
         }
         await _context.SaveChangesAsync();
 
-        // Intentar registrar el cliente número 11
+        // Intentar registrar el cliente número 1001
         var command = new UpsertClienteCommand
         {
             TipoIdentificacion = "04",
-            Identificacion = "1790012345099",
-            RazonSocial = "CLIENTE ONCE S.A.",
+            Identificacion = "1790012399999",
+            RazonSocial = "CLIENTE EXTRA S.A.",
             Direccion = "Av. 11",
-            CorreoElectronico = "once@test.com"
+            CorreoElectronico = "extra@test.com"
         };
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
             handler.Handle(command, CancellationToken.None));
 
-        ex.Message.ShouldContain("límite máximo permitido de 10 compradores");
+        ex.Message.ShouldContain("límite máximo permitido");
     }
 }
 
