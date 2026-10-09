@@ -22,7 +22,7 @@ public class CatalogoProductoConfiguration : IEntityTypeConfiguration<CatalogoPr
             .IsRequired();
 
         builder.Property(p => p.PrecioUnitario)
-            .HasPrecision(18, 4)
+            .HasPrecision(18, 6)
             .IsRequired();
 
         builder.Property(p => p.CodigoImpuesto)

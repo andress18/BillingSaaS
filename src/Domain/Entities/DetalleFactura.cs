@@ -43,7 +43,7 @@ public class DetalleFactura : BaseAuditableEntity
             Cantidad = cantidad,
             PrecioUnitario = precioUnitario,
             Descuento = descuento,
-            PrecioTotalSinImpuesto = (cantidad * precioUnitario) - descuento,
+            PrecioTotalSinImpuesto = Math.Round((cantidad * precioUnitario) - descuento, 2, MidpointRounding.AwayFromZero),
             _impuestos = impuestos,
             CatalogoProductoId = catalogoProductoId
         };
