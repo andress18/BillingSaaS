@@ -81,7 +81,7 @@ public class ClienteMigrador : IClienteMigrador
 
                             if (emisorExistente != null)
                             {
-                                /*
+                                
                                 // [COMENTADO PARA PRODUCCIÓN]: No sobrescribir contraseñas de usuarios existentes
                                 if (!string.IsNullOrWhiteSpace(clienteDto.PasswordPlana) && clienteDto.PasswordPlana != "Temporal123*")
                                 {
@@ -98,12 +98,12 @@ public class ClienteMigrador : IClienteMigrador
                                         }
                                     }
                                 }
-                                */
+                                
 
                                 var emisorTracked = await _context.Emisores.FirstOrDefaultAsync(e => e.Id == emisorExistente.Id, cancellationToken);
                                 if (emisorTracked != null)
                                 {
-                                    /*
+                                    
                                     // [COMENTADO PARA PRODUCCIÓN]: No sobrescribir logotipos de emisores existentes
                                     var logoParaActualizar = !string.IsNullOrWhiteSpace(clienteDto.Logo)
                                         ? clienteDto.Logo
@@ -145,7 +145,23 @@ public class ClienteMigrador : IClienteMigrador
                                             _logger.LogWarning("[FIRMA NO CONFIGURADA] Firma en BD antigua no válida para '{Ruc}'. Error: {Error}", rucNormalizado, certExistenteResult.ErrorMensaje);
                                         }
                                     }
-                                    */
+                                    
+
+                                    // Actualizar vigencia de suscripción según CSV
+                                    if (clienteDto.TieneFechaFinPlanExplicita)
+                                    {
+                                        var suscripcionExistente = await _context.Suscripciones
+                                            .OrderByDescending(s => s.FechaVencimiento)
+                                            .FirstOrDefaultAsync(s => s.TenantId == emisorTracked.TenantId, cancellationToken);
+
+                                        if (suscripcionExistente != null)
+                                        {
+                                            suscripcionExistente.ActualizarVigencia(clienteDto.FechaFinPlan, clienteDto.FechaInicioPlan);
+                                            await _context.SaveChangesAsync(cancellationToken);
+                                            _logger.LogInformation("[SUSCRIPCIÓN ACTUALIZADA] Se actualizó la fecha fin de suscripción para el cliente '{Desc}' (RUC: {Ruc}) a {Fecha:yyyy-MM-dd} (Estado: {Estado}).",
+                                                clienteDesc, rucNormalizado, suscripcionExistente.FechaVencimiento, suscripcionExistente.Estado);
+                                        }
+                                    }
 
                                     // Sincronizar datos históricos (facturas, compradores, productos)
                                     await MigrarDatosHistoricosClienteAsync(emisorTracked.TenantId, emisorTracked, clienteDto, clienteDesc, result, cancellationToken);
@@ -173,7 +189,7 @@ public class ClienteMigrador : IClienteMigrador
 
                         if (userExistente != null)
                         {
-                            /*
+                            
                             // [COMENTADO PARA PRODUCCIÓN]: No sobrescribir contraseñas de usuarios existentes
                             if (!string.IsNullOrWhiteSpace(clienteDto.PasswordPlana) && clienteDto.PasswordPlana != "Temporal123*")
                             {
@@ -184,7 +200,7 @@ public class ClienteMigrador : IClienteMigrador
                                     _logger.LogInformation("[PASSWORD ACTUALIZADO] Se actualizó la contraseña para el usuario existente '{User}' con la clave real del CSV.", userExistente.UserName);
                                 }
                             }
-                            */
+                            
 
                             // Corregir logo y firma también si se encontró por usuario existente
                             var emisorUser = await _context.Emisores.FirstOrDefaultAsync(e => e.TenantId == userExistente.TenantId, cancellationToken);
@@ -194,7 +210,7 @@ public class ClienteMigrador : IClienteMigrador
                                 _context.Emisores.Add(emisorUser);
                                 await _context.SaveChangesAsync(cancellationToken);
                             }
-                            /*
+                            
                             else
                             {
                                 // [COMENTADO PARA PRODUCCIÓN]: No sobrescribir logotipo ni firma digital
@@ -231,7 +247,23 @@ public class ClienteMigrador : IClienteMigrador
                                     }
                                 }
                             }
-                            */
+                            
+
+                            // Actualizar vigencia de suscripción según CSV
+                            if (clienteDto.TieneFechaFinPlanExplicita)
+                            {
+                                var suscripcionUser = await _context.Suscripciones
+                                    .OrderByDescending(s => s.FechaVencimiento)
+                                    .FirstOrDefaultAsync(s => s.TenantId == userExistente.TenantId, cancellationToken);
+
+                                if (suscripcionUser != null)
+                                {
+                                    suscripcionUser.ActualizarVigencia(clienteDto.FechaFinPlan, clienteDto.FechaInicioPlan);
+                                    await _context.SaveChangesAsync(cancellationToken);
+                                    _logger.LogInformation("[SUSCRIPCIÓN ACTUALIZADA] Se actualizó la fecha fin de suscripción para el usuario existente '{User}' a {Fecha:yyyy-MM-dd} (Estado: {Estado}).",
+                                        userExistente.UserName, suscripcionUser.FechaVencimiento, suscripcionUser.Estado);
+                                }
+                            }
 
                             // Sincronizar datos históricos (facturas, compradores, productos)
                             await MigrarDatosHistoricosClienteAsync(userExistente.TenantId, emisorUser, clienteDto, clienteDesc, result, cancellationToken);
@@ -304,10 +336,10 @@ public class ClienteMigrador : IClienteMigrador
                         }
 
                         var fechaFin = clienteDto.FechaFinPlan > DateTime.MinValue ? clienteDto.FechaFinPlan : DateTime.UtcNow.AddYears(1);
-                        var fechaInicio = clienteDto.FechaInicioPlan > DateTime.MinValue ? clienteDto.FechaInicioPlan : DateTime.UtcNow;
+                        var fechaInicio = clienteDto.FechaInicioPlan > DateTime.MinValue ? clienteDto.FechaInicioPlan : fechaFin.AddYears(-1);
                         if (fechaFin < fechaInicio)
                         {
-                            fechaInicio = fechaFin.AddMonths(-1);
+                            fechaInicio = fechaFin.AddYears(-1);
                         }
 
                         var suscripcion = TenantSubscription.Crear(
@@ -527,7 +559,7 @@ public class ClienteMigrador : IClienteMigrador
                 result.TotalClientesCatalogoCreados++;
                 hubieronCompradoresNuevos = true;
             }
-            /*
+            
             else
             {
                 // [COMENTADO PARA PRODUCCIÓN]: No modificar compradores existentes
@@ -563,7 +595,7 @@ public class ClienteMigrador : IClienteMigrador
                     hubieronCompradoresNuevos = true;
                 }
             }
-            */
+            
         }
 
         if (hubieronCompradoresNuevos)
@@ -626,7 +658,7 @@ public class ClienteMigrador : IClienteMigrador
                     _logger.LogWarning("No se pudo agregar producto '{Cod}' al catálogo para {Desc}: {Msg}", codPrincipal, clienteDesc, ex.Message);
                 }
             }
-            /*
+            
             else
             {
                 // [COMENTADO PARA PRODUCCIÓN]: No modificar productos existentes
@@ -658,7 +690,7 @@ public class ClienteMigrador : IClienteMigrador
                     hubieronProductosNuevos = true;
                 }
             }
-            */
+            
         }
 
         if (hubieronProductosNuevos)
@@ -666,7 +698,7 @@ public class ClienteMigrador : IClienteMigrador
             await _context.SaveChangesAsync(cancellationToken);
         }
 
-        /*
+        
         // =========================================================================
         // [COMENTADO PARA PRODUCCIÓN]:
         // No procesar facturas históricas ni actualizar correlativo del emisor.
@@ -864,6 +896,6 @@ public class ClienteMigrador : IClienteMigrador
 
             await _context.SaveChangesAsync(cancellationToken);
         }
-        */
+        
     }
 }

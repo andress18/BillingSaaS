@@ -9,7 +9,8 @@ namespace BillingSaaS.MigrationTool.Services;
 public record PartnerCsvEntry(
     string Identificador,
     string PasswordUsuario,
-    string? PasswordFirma);
+    string? PasswordFirma,
+    DateTime? FechaFinSuscripcion = null);
 
 public interface IPartnerCsvFilterService
 {
@@ -76,6 +77,7 @@ public class PartnerCsvFilterService : IPartnerCsvFilterService
         int colIdentificador = 0;
         int colPassword = 1;
         int colPasswordFirma = -1;
+        int colFechaFin = -1;
 
         int startIndex = 0;
         var header = SplitCsvLine(lines[0], delimiter);
@@ -100,6 +102,11 @@ public class PartnerCsvFilterService : IPartnerCsvFilterService
                 colPasswordFirma = i;
                 hasHeaders = true;
             }
+            else if (h is "finsubscripcion" or "finsuscripcion" or "fechafin" or "fechavencimiento" or "fechafinplan" or "vencimiento" or "fechaplan")
+            {
+                colFechaFin = i;
+                hasHeaders = true;
+            }
         }
 
         if (hasHeaders)
@@ -108,10 +115,17 @@ public class PartnerCsvFilterService : IPartnerCsvFilterService
         }
         else
         {
-            // Sin encabezado explícito: col 0 = Usuario, col 1 = Password, col 2 = PasswordFirma (si existe)
+            // Sin encabezado explícito: col 0 = Usuario, col 1 = Password, col 2 = PasswordFirma o FechaFin
             if (header.Count > 2)
             {
-                colPasswordFirma = 2;
+                if (DateTime.TryParse(header[2], System.Globalization.CultureInfo.InvariantCulture, out _))
+                {
+                    colFechaFin = 2;
+                }
+                else
+                {
+                    colPasswordFirma = 2;
+                }
             }
         }
 
@@ -129,12 +143,31 @@ public class PartnerCsvFilterService : IPartnerCsvFilterService
                 ? columns[colPasswordFirma].Trim()
                 : null;
 
+            DateTime? fechaFinSuscripcion = null;
+            if (colFechaFin >= 0 && columns.Count > colFechaFin && !string.IsNullOrWhiteSpace(columns[colFechaFin]))
+            {
+                var rawFecha = columns[colFechaFin].Trim();
+                string[] formatos = { "M/d/yyyy", "MM/dd/yyyy", "M/dd/yyyy", "MM/d/yyyy", "d/M/yyyy", "dd/MM/yyyy", "yyyy-MM-dd", "yyyy/MM/dd" };
+                if (DateTime.TryParseExact(rawFecha, formatos, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var dtParsed))
+                {
+                    fechaFinSuscripcion = DateTime.SpecifyKind(dtParsed.Date.AddHours(23).AddMinutes(59).AddSeconds(59), DateTimeKind.Utc);
+                }
+                else if (DateTime.TryParse(rawFecha, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var dtFallback))
+                {
+                    fechaFinSuscripcion = DateTime.SpecifyKind(dtFallback.Date.AddHours(23).AddMinutes(59).AddSeconds(59), DateTimeKind.Utc);
+                }
+                else
+                {
+                    _logger.LogWarning("Línea {Line}: No se pudo parsear la fecha de suscripción '{Fecha}' para el cliente '{Id}'.", i + 1, rawFecha, identificador);
+                }
+            }
+
             if (string.IsNullOrWhiteSpace(password))
             {
                 _logger.LogWarning("Línea {Line}: Cliente '{Id}' no tiene contraseña asignada en el CSV.", i + 1, identificador);
             }
 
-            var entry = new PartnerCsvEntry(identificador, password, passwordFirma);
+            var entry = new PartnerCsvEntry(identificador, password, passwordFirma, fechaFinSuscripcion);
 
             _entries[identificador] = entry;
 

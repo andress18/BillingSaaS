@@ -228,6 +228,13 @@ public class SqlLegacyDbSource : IClienteMigracionSource
                         ? csvEntry.PasswordUsuario
                         : "Temporal123*";
 
+                    DateTime fechaFinPlan = csvEntry?.FechaFinSuscripcion ?? DateTime.UtcNow.AddMonths(11);
+                    DateTime fechaInicioPlan = fechaFinPlan.AddYears(-1);
+                    if (fechaFinPlan < DateTime.UtcNow && fechaInicioPlan > fechaFinPlan)
+                    {
+                        fechaInicioPlan = fechaFinPlan.AddMonths(-1);
+                    }
+
                     var clienteDto = new ClienteMigracionDto
                     {
                         PartnerId = _options.PartnerId,
@@ -236,8 +243,9 @@ public class SqlLegacyDbSource : IClienteMigracionSource
                         Email = email,
                         PasswordPlana = passwordUsuario,
                         PlanCodigo = _options.PlanCodigoDefault,
-                        FechaInicioPlan = DateTime.UtcNow.AddMonths(-1),
-                        FechaFinPlan = DateTime.UtcNow.AddMonths(11), // 1 año de vigencia
+                        FechaInicioPlan = fechaInicioPlan,
+                        FechaFinPlan = fechaFinPlan,
+                        TieneFechaFinPlanExplicita = csvEntry?.FechaFinSuscripcion.HasValue ?? false,
                         Frecuencia = "ANUAL",
                         DiasGracia = 3,
                         CertificadoBase64 = certBase64,

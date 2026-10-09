@@ -17,6 +17,7 @@ public class ClienteMigracionDto
     public string PlanCodigo { get; set; } = "MIGRACION_SISTEMA"; // O "MIGRACION_FIRMA"
     public DateTime FechaInicioPlan { get; set; } = DateTime.UtcNow;
     public DateTime FechaFinPlan { get; set; }    // Fecha fin actual de su plan
+    public bool TieneFechaFinPlanExplicita { get; set; } // Indica si vino especificada explícitamente en el CSV/JSON
     public string Frecuencia { get; set; } = "ANUAL"; // "ANUAL" o "MENSUAL"
     public int DiasGracia { get; set; } = 3;
 

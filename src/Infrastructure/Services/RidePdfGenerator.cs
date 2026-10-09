@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -309,10 +310,10 @@ public class RidePdfGenerator : IRidePdfGenerator
                     {
                         table.ColumnsDefinition(columns =>
                         {
-                            columns.RelativeColumn(1.8f); // Cod. Principal
+                            columns.RelativeColumn(1.6f); // Cod. Principal
                             columns.RelativeColumn(1.0f); // Cantidad
-                            columns.RelativeColumn(4.4f); // Descripción
-                            columns.RelativeColumn(1.4f); // Precio Unitario
+                            columns.RelativeColumn(4.0f); // Descripción
+                            columns.RelativeColumn(1.8f); // Precio Unitario
                             columns.RelativeColumn(1.2f); // Descuento
                             columns.RelativeColumn(1.4f); // Precio Total
                         });
@@ -332,11 +333,11 @@ public class RidePdfGenerator : IRidePdfGenerator
                         foreach (var detalle in factura.Detalles)
                         {
                             table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(3).Text(detalle.CodigoPrincipal);
-                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(3).AlignRight().Text(detalle.Cantidad.ToString("N2"));
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(3).AlignRight().Text(FormatearDecimal(detalle.Cantidad, 2, 6));
                             table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(3).Text(detalle.Descripcion);
-                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(3).AlignRight().Text(detalle.PrecioUnitario.ToString("N2"));
-                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(3).AlignRight().Text(detalle.Descuento.ToString("N2"));
-                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(3).AlignRight().Text(detalle.PrecioTotalSinImpuesto.ToString("N2"));
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(3).AlignRight().Text(FormatearDecimal(detalle.PrecioUnitario, 2, 6));
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(3).AlignRight().Text(detalle.Descuento.ToString("N2", CultureInfo.InvariantCulture));
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(3).AlignRight().Text(detalle.PrecioTotalSinImpuesto.ToString("N2", CultureInfo.InvariantCulture));
                         }
                     });
 
@@ -1074,12 +1075,12 @@ public class RidePdfGenerator : IRidePdfGenerator
                     {
                         table.ColumnsDefinition(columns =>
                         {
-                            columns.RelativeColumn(2);    // Cod. Principal
-                            columns.RelativeColumn(1.2f); // Cantidad
-                            columns.RelativeColumn(4.5f); // Descripción
-                            columns.RelativeColumn(1.5f); // Precio Unitario
-                            columns.RelativeColumn(1.3f); // Descuento
-                            columns.RelativeColumn(1.5f); // Precio Total
+                            columns.RelativeColumn(1.8f); // Cod. Principal
+                            columns.RelativeColumn(1.1f); // Cantidad
+                            columns.RelativeColumn(4.1f); // Descripción
+                            columns.RelativeColumn(1.8f); // Precio Unitario
+                            columns.RelativeColumn(1.2f); // Descuento
+                            columns.RelativeColumn(1.4f); // Precio Total
                         });
 
                         // Encabezados
@@ -1109,11 +1110,11 @@ public class RidePdfGenerator : IRidePdfGenerator
                         foreach (var det in notaCredito.Detalles)
                         {
                             table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).Text(det.CodigoPrincipal).FontSize(7.5f);
-                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).AlignRight().Text(det.Cantidad.ToString("G29")).FontSize(7.5f);
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).AlignRight().Text(FormatearDecimal(det.Cantidad, 2, 6)).FontSize(7.5f);
                             table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).Text(det.Descripcion).FontSize(7.5f);
-                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).AlignRight().Text(det.PrecioUnitario.ToString("F2")).FontSize(7.5f);
-                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).AlignRight().Text(det.Descuento.ToString("F2")).FontSize(7.5f);
-                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).AlignRight().Text(det.PrecioTotalSinImpuesto.ToString("F2")).FontSize(7.5f);
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).AlignRight().Text(FormatearDecimal(det.PrecioUnitario, 2, 6)).FontSize(7.5f);
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).AlignRight().Text(det.Descuento.ToString("F2", CultureInfo.InvariantCulture)).FontSize(7.5f);
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).AlignRight().Text(det.PrecioTotalSinImpuesto.ToString("F2", CultureInfo.InvariantCulture)).FontSize(7.5f);
                         }
                     });
 
@@ -1190,6 +1191,12 @@ public class RidePdfGenerator : IRidePdfGenerator
         });
 
         return document.GeneratePdf();
+    }
+
+    private static string FormatearDecimal(decimal valor, int minDec = 2, int maxDec = 6)
+    {
+        string formato = "0." + new string('0', minDec) + new string('#', maxDec - minDec);
+        return valor.ToString(formato, CultureInfo.InvariantCulture);
     }
 
     private static string GenerarCodigoBarrasSvg(string claveAcceso)

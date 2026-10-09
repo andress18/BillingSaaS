@@ -21,10 +21,10 @@ public class DetalleNotaCreditoConfiguration : IEntityTypeConfiguration<DetalleN
             .IsRequired();
 
         builder.Property(d => d.Cantidad)
-            .HasPrecision(18, 4);
+            .HasPrecision(18, 6);
 
         builder.Property(d => d.PrecioUnitario)
-            .HasPrecision(18, 4);
+            .HasPrecision(18, 6);
 
         builder.Property(d => d.Descuento)
             .HasPrecision(18, 2);

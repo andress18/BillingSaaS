@@ -21,6 +21,17 @@ public class Program
 {
     public static async Task<int> Main(string[] args)
     {
+        if (args.Length >= 2 && (args[0] == "--hash" || args[0] == "-h"))
+        {
+            var hasher = new PasswordHasher<ApplicationUser>();
+            var hash = hasher.HashPassword(null!, args[1]);
+            Console.WriteLine($"\n==================================================");
+            Console.WriteLine($"Password: {args[1]}");
+            Console.WriteLine($"Hash:     {hash}");
+            Console.WriteLine($"==================================================\n");
+            return 0;
+        }
+
         MigrationConsoleLogger.PrintBanner();
 
         var stopwatch = Stopwatch.StartNew();

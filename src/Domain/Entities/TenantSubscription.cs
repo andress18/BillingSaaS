@@ -131,5 +131,27 @@ public class TenantSubscription : BaseAuditableEntity
             throw new ArgumentException("El estado no puede estar vacío.", nameof(nuevoEstado));
         Estado = nuevoEstado.Trim().ToUpperInvariant();
     }
+
+    public void ActualizarVigencia(DateTime fechaVencimiento, DateTime? fechaInicio = null)
+    {
+        FechaVencimiento = fechaVencimiento;
+        if (fechaInicio.HasValue)
+        {
+            FechaInicio = fechaInicio.Value;
+        }
+        else if (FechaInicio > fechaVencimiento)
+        {
+            FechaInicio = fechaVencimiento.AddYears(-1);
+        }
+
+        if (fechaVencimiento < DateTime.UtcNow)
+        {
+            Estado = "VENCIDO";
+        }
+        else if (Estado == "VENCIDO")
+        {
+            Estado = "ACTIVO";
+        }
+    }
 }
 
