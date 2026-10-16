@@ -95,6 +95,24 @@ public class TenantSubscription : BaseAuditableEntity
         Estado = "ACTIVO";
     }
 
+    public void ActualizarVigencia(DateTime fechaVencimiento, DateTime? fechaInicio = null)
+    {
+        if (fechaInicio.HasValue && fechaInicio.Value > DateTime.MinValue)
+        {
+            FechaInicio = fechaInicio.Value;
+        }
+
+        FechaVencimiento = fechaVencimiento;
+        if (DateTime.UtcNow <= FechaVencimiento.AddDays(DiasGracia))
+        {
+            Estado = "ACTIVO";
+        }
+        else
+        {
+            Estado = "VENCIDO";
+        }
+    }
+
     public void ExtenderVigencia(string frecuencia, DateTime fechaActualUtc)
     {
         Frecuencia = frecuencia.Trim().ToUpperInvariant();
