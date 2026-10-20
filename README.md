@@ -1,57 +1,170 @@
-﻿# BillingSaaS
+# BillingSaaS – Plataforma SaaS Multi-tenant de Facturación Electrónica (.NET 10 & Cloud Native)
 
-The project was generated using the [Clean.Architecture.Solution.Template](https://github.com/jasontaylordev/CleanArchitecture) version 10.8.0.
+[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
+[![C#](https://img.shields.io/badge/C%23-13-239120?logo=csharp&logoColor=white)](https://docs.microsoft.com/en-us/dotnet/csharp/)
+[![Clean Architecture](https://img.shields.io/badge/Architecture-Clean%20%2F%20CQRS-blue)](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+[![.NET Aspire](https://img.shields.io/badge/.NET-Aspire-blueviolet?logo=dotnet)](https://learn.microsoft.com/dotnet/aspire/)
+[![Azure Functions](https://img.shields.io/badge/Azure-Functions-0062AD?logo=azurefunctions&logoColor=white)](https://azure.microsoft.com/services/functions/)
+[![Tests](https://img.shields.io/badge/Tests->200%20Passed-brightgreen)](tests/)
 
-## Build
+Plataforma empresarial multi-tenant desarrollada en **.NET 10** para la emisión, validación, firma digital criptográfica y autorización de comprobantes tributarios electrónicos (Facturas, Notas de Crédito, Notas de Débito) en cumplimiento con el **Servicio de Rentas Internas (SRI)** de Ecuador.
 
-Run `dotnet build` to build the solution.
+El proyecto está diseñado bajo principios de **Clean Architecture**, **CQRS (MediatR)**, observabilidad distribuida con **.NET Aspire / OpenTelemetry**, microservicios serverless en **Azure Functions** y un motor de cifrado simétrico autenticado **AES-GCM** para protección de certificados digitales en reposo.
 
-## Run
+---
 
-To run the application:
+## 🏗️ Arquitectura del Sistema
 
-```bash
-dotnet run --project .\src\AppHost
+El sistema implementa una arquitectura por capas desacoplada basada en Clean Architecture y Domain-Driven Design (DDD):
+
+```mermaid
+graph TD
+    subgraph Presentation & Client Layer
+        Web[Web Minimal API + Scalar Docs]
+        Func[Azure Functions - PDF Microservice]
+        Migrator[MigrationTool CLI - ETL Tool]
+    end
+
+    subgraph Application Layer
+        CQRS[CQRS Commands & Queries - MediatR]
+        Val[FluentValidation Pipelines]
+        Beh[Logging & Performance Behaviors]
+    end
+
+    subgraph Domain Layer
+        Entities[Entities: Factura, NotaCredito, Emisor, Tenant, Plan]
+        DomainEvents[Domain Events & Business Rules]
+        Constants[SRI Catalogs & Tax Rules]
+    end
+
+    subgraph Infrastructure Layer
+        EFCore[EF Core 10 - SQL Server / SQLite]
+        SriService[SRI SOAP Reception & Authorization]
+        Signer[XAdES-BES Digital Signer - X509 PKCS#12]
+        Crypto[AES-GCM Certificate Encryption]
+        PDF[QuestPDF Engine & Barcode Renderer]
+    end
+
+    subgraph Orchestration & Telemetry
+        Aspire[".NET Aspire AppHost (Service Discovery & OpenTelemetry)"]
+    end
+
+    Web --> CQRS
+    Func --> PDF
+    Migrator --> CQRS
+    CQRS --> Entities
+    CQRS --> Val
+    CQRS --> Beh
+    CQRS --> EFCore
+    CQRS --> SriService
+    CQRS --> Signer
+    CQRS --> Crypto
+    Aspire -.-> Web
+    Aspire -.-> Func
 ```
 
-The Aspire dashboard will open automatically, showing the application URLs and logs.
+### Proyectos de la Solución
 
-## Code Styles & Formatting
+* **`src/Domain`**: Entidades centrales (`Factura`, `NotaCredito`, `NotaDebito`, `Emisor`, `Comprador`, `Tenant`, `TenantSubscription`, `Plan`), reglas de negocio de cálculo de impuestos (RIMPE, IVA con precisión de 6 decimales) y eventos de dominio.
+* **`src/Application`**: Casos de uso implementados mediante CQRS con MediatR. Validaciones automáticas en pipeline con FluentValidation, mapeos y servicios de autorización multi-inquilino.
+* **`src/Infrastructure`**: Acceso a datos con Entity Framework Core 10 (SQL Server y SQLite), interceptores de auditoría y despacho de eventos de dominio, integración SOAP con web services del SRI, generador y firmador digital **XAdES-BES** y servicio de cifrado **AES-GCM**.
+* **`src/Web`**: Endpoints HTTP Minimal APIs optimizados, autenticación basada en Identity & Claims con soporte multi-tenant, y documentación interactiva moderna con **Scalar**.
+* **`src/Functions`**: Microservicio serverless en **Azure Functions** aislado para la generación masiva de representaciones impresas (RIDE PDF) con QuestPDF y códigos de barra SVG.
+* **`src/MigrationTool`**: Herramienta de consola tipo ETL para migrar bases de datos legadas hacia el nuevo modelo SaaS (lectura SQL, parseo masivo de XML históricos, validación de certificados X509 y sincronización de catálogos).
+* **`src/AppHost` & `src/ServiceDefaults`**: Orquestación cloud-native con **.NET Aspire**, integrando métricas, trazas distribuidas, health checks y resiliencia de red.
 
-The template includes [EditorConfig](https://editorconfig.org/) support to help maintain consistent coding styles for multiple developers working on the same project across various editors and IDEs. The **.editorconfig** file defines the coding styles applicable to this solution.
+---
 
-## Code Scaffolding
+## 🚀 Características Principales
 
-The template includes support to scaffold new commands and queries.
+### 1. Facturación Electrónica Integral (SRI Ecuador)
+* Generación de comprobantes XML según fichas técnicas oficiales (v1.1.0 / v1.0.0).
+* Generación de clave de acceso de 49 dígitos con algoritmo Módulo 11.
+* Firma digital electrónica en formato **XAdES-BES** utilizando certificados `.p12` / `.pfx` (`System.Security.Cryptography.Pkcs` / `Xml`).
+* Consumo resiliente de web services SOAP de Recepción y Autorización del SRI.
+* Generación de reportes PDF RIDE de alta fidelidad con códigos de barra y QR interactivo.
 
-Start in the `.\src\Application\` folder.
+### 2. Multi-tenancy & Gestión de Suscripciones
+* Aislamiento de datos por inquilino (`TenantId`).
+* Control granular de planes (Básico, Emprendedor, Pro, Corporativo) y límites de emisión de comprobantes.
+* Ciclo de vida y estados de inquilinos (`ACTIVO`, `SUSPENDIDO`, `VENCIDO`, `PERIODO_GRACIA`).
+* Flujo de renovación y aprobación de solicitudes de suscripción.
 
-Create a new command:
+### 3. Seguridad y Criptografía
+* **Cifrado en reposo:** Certificados digitales `.p12` y contraseñas tributarias protegidos en base de datos mediante cifrado autenticado **AES-GCM (256-bit)**.
+* **Aislamiento de Identidad:** Tokens JWT con claims de `TenantId` y roles (`Administrador`, `Partner`, `Cliente`).
+* **Secret Management:** Gestión de secretos mediante User Secrets en desarrollo y variables de entorno / Azure Key Vault en producción.
 
-```
-dotnet new ca-usecase --name CreateTodoList --feature-name TodoLists --usecase-type command --return-type int
-```
+### 4. Herramienta de Migración de Datos Legados (`MigrationTool`)
+* Extracción y transformación de clientes, compradores, catálogo de productos y comprobantes desde bases de datos relacionales tradicionales.
+* Parseo de XMLs históricos para reconstrucción del historial contable.
+* Validación previa de certificados digitales y fechas de expiración.
 
-Create a new query:
+---
 
-```
-dotnet new ca-usecase -n GetTodos -fn TodoLists -ut query -rt TodosVm
-```
+## 🧪 Pruebas Automatizadas
 
-If you encounter the error *"No templates or subcommands found matching: 'ca-usecase'."*, install the template and try again:
+La solución cuenta con más de **200 pruebas automatizadas**:
 
-```bash
-dotnet new install Clean.Architecture.Solution.Template::10.8.0
-```
+* **Domain Unit Tests**: Validación de invariantes de entidades, cálculo tributario y generación de clave de acceso.
+* **Application Unit Tests**: Pruebas de casos de uso (Commands/Queries), validadores FluentValidation y mocks de servicios externos.
+* **Infrastructure Integration Tests**: Pruebas de generadores XML, firma digital, cifrado AES-GCM y servicios SRI.
+* **Functional API Tests**: Pruebas de integración de extremo a extremo con `WebApplicationFactory` y reseteo de base de datos con `Respawn`.
 
-## Test
+Para ejecutar las pruebas:
 
-The solution contains unit, integration, and functional tests.
-
-To run the tests:
 ```bash
 dotnet test
 ```
 
-## Help
-To learn more about the template go to the [project website](https://cleanarchitecture.jasontaylor.dev). Here you can find additional guidance, request new features, report a bug, and discuss the template with other users.
+---
+
+## 💻 Ejecución Local
+
+### Prerrequisitos
+* [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+* [Docker Desktop](https://www.docker.com/) (opcional, para ejecutar con contenedores mediante Aspire)
+
+### Pasos para iniciar
+
+1. **Clonar el repositorio:**
+   ```bash
+   git clone https://github.com/andress18/BillingSaaS.git
+   cd BillingSaaS
+   ```
+
+2. **Restaurar paquetes y compilar:**
+   ```bash
+   dotnet build
+   ```
+
+3. **Ejecutar con .NET Aspire (Recomendado):**
+   ```bash
+   dotnet run --project src/AppHost
+   ```
+   El dashboard interactivo de Aspire se abrirá automáticamente en tu navegador mostrando las URLs activas, métricas y trazas en tiempo real.
+
+4. **Acceder a la documentación de la API:**
+   Una vez iniciada la aplicación Web, navega a:
+   ```
+   https://localhost:5001/scalar
+   ```
+
+---
+
+## 🛠️ Stack Tecnológico
+
+| Capa / Área | Tecnología |
+| :--- | :--- |
+| **Framework** | .NET 10 (C# 13) |
+| **Arquitectura** | Clean Architecture, CQRS, DDD, Multi-tenancy |
+| **Acceso a Datos** | Entity Framework Core 10, SQL Server, SQLite |
+| **Patrón CQRS** | MediatR, FluentValidation |
+| **Criptografía** | System.Security.Cryptography.Pkcs/Xml (XAdES-BES), AES-GCM 256 |
+| **Documentos** | QuestPDF, Barcoder SVG |
+| **Microservicios** | Azure Functions (Isolated Worker) |
+| **Orquestación** | .NET Aspire (Hosting, Service Discovery, Health Checks) |
+| **Observabilidad** | OpenTelemetry (Metrics, Traces, Exporters) |
+| **Documentación** | Scalar (OpenAPI) |
+| **Testing** | NUnit, Shouldly, Moq, Respawn, WebApplicationFactory |
+| **CI/CD** | GitHub Actions (Azure Web Apps & Azure Functions) |
