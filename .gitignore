@@ -495,7 +495,6 @@ $RECYCLE.BIN/
 appsettings.*.local.json
 
 # Migration Tool sensitive files
-src/MigrationTool/*.csv
-!src/MigrationTool/*.example.csv
+src/MigrationTool/
 *.local.json
 appsettings.Production.json

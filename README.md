@@ -5,7 +5,7 @@
 [![Clean Architecture](https://img.shields.io/badge/Architecture-Clean%20%2F%20CQRS-blue)](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
 [![.NET Aspire](https://img.shields.io/badge/.NET-Aspire-blueviolet?logo=dotnet)](https://learn.microsoft.com/dotnet/aspire/)
 [![Azure Functions](https://img.shields.io/badge/Azure-Functions-0062AD?logo=azurefunctions&logoColor=white)](https://azure.microsoft.com/services/functions/)
-[![Tests](https://img.shields.io/badge/Tests->200%20Passed-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/Tests->150%20Passed-brightgreen)](tests/)
 
 Plataforma empresarial multi-tenant desarrollada en **.NET 10** para la emisión, validación, firma digital criptográfica y autorización de comprobantes tributarios electrónicos (Facturas, Notas de Crédito, Notas de Débito) en cumplimiento con el **Servicio de Rentas Internas (SRI)** de Ecuador.
 
@@ -22,7 +22,6 @@ graph TD
     subgraph Presentation & Client Layer
         Web[Web Minimal API + Scalar Docs]
         Func[Azure Functions - PDF Microservice]
-        Migrator[MigrationTool CLI - ETL Tool]
     end
 
     subgraph Application Layer
@@ -51,7 +50,6 @@ graph TD
 
     Web --> CQRS
     Func --> PDF
-    Migrator --> CQRS
     CQRS --> Entities
     CQRS --> Val
     CQRS --> Beh
@@ -70,7 +68,6 @@ graph TD
 * **`src/Infrastructure`**: Acceso a datos con Entity Framework Core 10 (SQL Server y SQLite), interceptores de auditoría y despacho de eventos de dominio, integración SOAP con web services del SRI, generador y firmador digital **XAdES-BES** y servicio de cifrado **AES-GCM**.
 * **`src/Web`**: Endpoints HTTP Minimal APIs optimizados, autenticación basada en Identity & Claims con soporte multi-tenant, y documentación interactiva moderna con **Scalar**.
 * **`src/Functions`**: Microservicio serverless en **Azure Functions** aislado para la generación masiva de representaciones impresas (RIDE PDF) con QuestPDF y códigos de barra SVG.
-* **`src/MigrationTool`**: Herramienta de consola tipo ETL para migrar bases de datos legadas hacia el nuevo modelo SaaS (lectura SQL, parseo masivo de XML históricos, validación de certificados X509 y sincronización de catálogos).
 * **`src/AppHost` & `src/ServiceDefaults`**: Orquestación cloud-native con **.NET Aspire**, integrando métricas, trazas distribuidas, health checks y resiliencia de red.
 
 ---
@@ -95,16 +92,16 @@ graph TD
 * **Aislamiento de Identidad:** Tokens JWT con claims de `TenantId` y roles (`Administrador`, `Partner`, `Cliente`).
 * **Secret Management:** Gestión de secretos mediante User Secrets en desarrollo y variables de entorno / Azure Key Vault en producción.
 
-### 4. Herramienta de Migración de Datos Legados (`MigrationTool`)
-* Extracción y transformación de clientes, compradores, catálogo de productos y comprobantes desde bases de datos relacionales tradicionales.
-* Parseo de XMLs históricos para reconstrucción del historial contable.
-* Validación previa de certificados digitales y fechas de expiración.
+### 4. Observabilidad y Resiliencia Cloud-Native
+* Integración profunda con **.NET Aspire** y **OpenTelemetry** para trazas distribuidas entre el API y Azure Functions.
+* Resiliencia HTTP (`Microsoft.Extensions.Http.Resilience`) con políticas de reintento ante caídas intermitentes de los web services gubernamentales del SRI.
+* Health Checks automatizados para base de datos y endpoints de emisión.
 
 ---
 
 ## 🧪 Pruebas Automatizadas
 
-La solución cuenta con más de **200 pruebas automatizadas**:
+La solución cuenta con una suite completa de pruebas automatizadas:
 
 * **Domain Unit Tests**: Validación de invariantes de entidades, cálculo tributario y generación de clave de acceso.
 * **Application Unit Tests**: Pruebas de casos de uso (Commands/Queries), validadores FluentValidation y mocks de servicios externos.
