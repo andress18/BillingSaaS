@@ -149,5 +149,6 @@ public class TenantSubscription : BaseAuditableEntity
             throw new ArgumentException("El estado no puede estar vacío.", nameof(nuevoEstado));
         Estado = nuevoEstado.Trim().ToUpperInvariant();
     }
-}
+
+    }
 

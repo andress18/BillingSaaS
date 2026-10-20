@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -142,6 +143,7 @@ public class RidePdfGenerator : IRidePdfGenerator
         bool obligadoContabilidad = factura.Emisor?.ObligadoContabilidad == "SI";
         string? contribuyenteEspecial = factura.Emisor?.ContribuyenteEspecial;
         string? regimenRimpe = factura.Emisor?.RegimenRimpe ?? factura.RegimenRimpeEmisor;
+        string regimenTributario = RegimenRimpeTipos.ResolverParaRide(regimenRimpe);
 
         // 5. Creación del Documento QuestPDF
         var document = Document.Create(container =>
@@ -203,10 +205,7 @@ public class RidePdfGenerator : IRidePdfGenerator
                                     t.Span(obligadoContabilidad ? "SI" : "NO");
                                 });
 
-                                if (!string.IsNullOrWhiteSpace(regimenRimpe))
-                                {
-                                    emisorBox.Item().PaddingTop(2).Text(regimenRimpe.ToUpperInvariant()).Bold().FontSize(7.5f);
-                                }
+                                emisorBox.Item().PaddingTop(2).Text(regimenTributario.ToUpperInvariant()).Bold().FontSize(7.5f);
                             });
                         });
 
@@ -311,10 +310,10 @@ public class RidePdfGenerator : IRidePdfGenerator
                     {
                         table.ColumnsDefinition(columns =>
                         {
-                            columns.RelativeColumn(1.8f); // Cod. Principal
+                            columns.RelativeColumn(1.6f); // Cod. Principal
                             columns.RelativeColumn(1.0f); // Cantidad
-                            columns.RelativeColumn(4.4f); // Descripción
-                            columns.RelativeColumn(1.4f); // Precio Unitario
+                            columns.RelativeColumn(4.0f); // Descripción
+                            columns.RelativeColumn(1.8f); // Precio Unitario
                             columns.RelativeColumn(1.2f); // Descuento
                             columns.RelativeColumn(1.4f); // Precio Total
                         });
@@ -334,11 +333,11 @@ public class RidePdfGenerator : IRidePdfGenerator
                         foreach (var detalle in factura.Detalles)
                         {
                             table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(3).Text(detalle.CodigoPrincipal);
-                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(3).AlignRight().Text(detalle.Cantidad.ToString("N2"));
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(3).AlignRight().Text(FormatearDecimal(detalle.Cantidad, 2, 6));
                             table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(3).Text(detalle.Descripcion);
-                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(3).AlignRight().Text(detalle.PrecioUnitario.ToString("N2"));
-                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(3).AlignRight().Text(detalle.Descuento.ToString("N2"));
-                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(3).AlignRight().Text(detalle.PrecioTotalSinImpuesto.ToString("N2"));
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(3).AlignRight().Text(FormatearDecimal(detalle.PrecioUnitario, 2, 6));
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(3).AlignRight().Text(detalle.Descuento.ToString("N2", CultureInfo.InvariantCulture));
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(3).AlignRight().Text(detalle.PrecioTotalSinImpuesto.ToString("N2", CultureInfo.InvariantCulture));
                         }
                     });
 
@@ -370,14 +369,11 @@ public class RidePdfGenerator : IRidePdfGenerator
                                     });
                                 }
 
-                                if (!string.IsNullOrWhiteSpace(regimenRimpe))
+                                adicionalBox.Item().PaddingTop(2).Text(t =>
                                 {
-                                    adicionalBox.Item().PaddingTop(2).Text(t =>
-                                    {
-                                        t.Span("Régimen Tributario: ").Bold();
-                                        t.Span(regimenRimpe);
-                                    });
-                                }
+                                    t.Span("Régimen Tributario: ").Bold();
+                                    t.Span(regimenTributario);
+                                });
 
                                 if (factura.CamposAdicionales != null && factura.CamposAdicionales.Count > 0)
                                 {
@@ -581,6 +577,7 @@ public class RidePdfGenerator : IRidePdfGenerator
         bool obligadoContabilidad = notaDebito.Emisor?.ObligadoContabilidad == "SI";
         string? contribuyenteEspecial = notaDebito.Emisor?.ContribuyenteEspecial;
         string? regimenRimpe = notaDebito.Emisor?.RegimenRimpe;
+        string regimenTributario = RegimenRimpeTipos.ResolverParaRide(regimenRimpe);
 
         var document = Document.Create(container =>
         {
@@ -639,10 +636,7 @@ public class RidePdfGenerator : IRidePdfGenerator
                                     t.Span(obligadoContabilidad ? "SI" : "NO");
                                 });
 
-                                if (!string.IsNullOrWhiteSpace(regimenRimpe))
-                                {
-                                    emisorBox.Item().PaddingTop(2).Text(regimenRimpe.ToUpperInvariant()).Bold().FontSize(7.5f);
-                                }
+                                emisorBox.Item().PaddingTop(2).Text(regimenTributario.ToUpperInvariant()).Bold().FontSize(7.5f);
                             });
                         });
 
@@ -798,6 +792,12 @@ public class RidePdfGenerator : IRidePdfGenerator
                                         t.Span(notaDebito.Cliente.Direccion);
                                     });
                                 }
+
+                                infoAdicional.Item().PaddingTop(2).Text(t =>
+                                {
+                                    t.Span("Régimen Tributario: ").Bold();
+                                    t.Span(regimenTributario);
+                                });
 
                                 // Leyenda técnica de software / Anexo 26 SRI
                                 infoAdicional.Item().PaddingTop(3).Text($"Software: {_nombreProveedor} (RUC Proveedor: {_rucProveedor} - Anexo 26)").FontSize(7f).FontColor(Colors.Grey.Darken2);
@@ -974,6 +974,7 @@ public class RidePdfGenerator : IRidePdfGenerator
         bool obligadoContabilidad = notaCredito.Emisor?.ObligadoContabilidad == "SI";
         string? contribuyenteEspecial = notaCredito.Emisor?.ContribuyenteEspecial;
         string? regimenRimpe = notaCredito.Emisor?.RegimenRimpe;
+        string regimenTributario = RegimenRimpeTipos.ResolverParaRide(regimenRimpe);
 
         var document = Document.Create(container =>
         {
@@ -1011,8 +1012,7 @@ public class RidePdfGenerator : IRidePdfGenerator
 
                                 emisorBox.Item().Text($"OBLIGADO A LLEVAR CONTABILIDAD: {(obligadoContabilidad ? "SI" : "NO")}").FontSize(8).Bold();
 
-                                if (!string.IsNullOrWhiteSpace(regimenRimpe))
-                                    emisorBox.Item().PaddingTop(2).Text(regimenRimpe).FontSize(7.5f).Bold();
+                                emisorBox.Item().PaddingTop(2).Text(regimenTributario.ToUpperInvariant()).FontSize(7.5f).Bold();
                             });
                         });
 
@@ -1075,12 +1075,12 @@ public class RidePdfGenerator : IRidePdfGenerator
                     {
                         table.ColumnsDefinition(columns =>
                         {
-                            columns.RelativeColumn(2);    // Cod. Principal
-                            columns.RelativeColumn(1.2f); // Cantidad
-                            columns.RelativeColumn(4.5f); // Descripción
-                            columns.RelativeColumn(1.5f); // Precio Unitario
-                            columns.RelativeColumn(1.3f); // Descuento
-                            columns.RelativeColumn(1.5f); // Precio Total
+                            columns.RelativeColumn(1.8f); // Cod. Principal
+                            columns.RelativeColumn(1.1f); // Cantidad
+                            columns.RelativeColumn(4.1f); // Descripción
+                            columns.RelativeColumn(1.8f); // Precio Unitario
+                            columns.RelativeColumn(1.2f); // Descuento
+                            columns.RelativeColumn(1.4f); // Precio Total
                         });
 
                         // Encabezados
@@ -1110,11 +1110,11 @@ public class RidePdfGenerator : IRidePdfGenerator
                         foreach (var det in notaCredito.Detalles)
                         {
                             table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).Text(det.CodigoPrincipal).FontSize(7.5f);
-                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).AlignRight().Text(det.Cantidad.ToString("G29")).FontSize(7.5f);
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).AlignRight().Text(FormatearDecimal(det.Cantidad, 2, 6)).FontSize(7.5f);
                             table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).Text(det.Descripcion).FontSize(7.5f);
-                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).AlignRight().Text(det.PrecioUnitario.ToString("F2")).FontSize(7.5f);
-                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).AlignRight().Text(det.Descuento.ToString("F2")).FontSize(7.5f);
-                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).AlignRight().Text(det.PrecioTotalSinImpuesto.ToString("F2")).FontSize(7.5f);
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).AlignRight().Text(FormatearDecimal(det.PrecioUnitario, 2, 6)).FontSize(7.5f);
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).AlignRight().Text(det.Descuento.ToString("F2", CultureInfo.InvariantCulture)).FontSize(7.5f);
+                            table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3).AlignRight().Text(det.PrecioTotalSinImpuesto.ToString("F2", CultureInfo.InvariantCulture)).FontSize(7.5f);
                         }
                     });
 
@@ -1133,6 +1133,12 @@ public class RidePdfGenerator : IRidePdfGenerator
                                     box.Item().PaddingTop(2).Text($"Dirección: {notaCredito.Cliente.Direccion}").FontSize(7.5f);
                                 if (!string.IsNullOrWhiteSpace(notaCredito.Cliente?.CorreoElectronico))
                                     box.Item().PaddingTop(1).Text($"Email: {notaCredito.Cliente.CorreoElectronico}").FontSize(7.5f);
+
+                                box.Item().PaddingTop(2).Text(t =>
+                                {
+                                    t.Span("Régimen Tributario: ").Bold();
+                                    t.Span(regimenTributario);
+                                });
 
                                 // Leyenda técnica de software / Anexo 26 SRI
                                 box.Item().PaddingTop(3).Text($"Software: {_nombreProveedor} (RUC Proveedor: {_rucProveedor} - Anexo 26)").FontSize(7f).FontColor(Colors.Grey.Darken2);
@@ -1185,6 +1191,12 @@ public class RidePdfGenerator : IRidePdfGenerator
         });
 
         return document.GeneratePdf();
+    }
+
+    private static string FormatearDecimal(decimal valor, int minDec = 2, int maxDec = 6)
+    {
+        string formato = "0." + new string('0', minDec) + new string('#', maxDec - minDec);
+        return valor.ToString(formato, CultureInfo.InvariantCulture);
     }
 
     private static string GenerarCodigoBarrasSvg(string claveAcceso)

@@ -323,7 +323,6 @@ public class ApplicationDbContextInitialiser
         // IDs canónicos de Tenants
         var adminTenantId = Guid.Parse("00000000-0000-0000-0000-000000000001");
         var partnerTenantId = Guid.Parse("22222222-2222-2222-2222-222222222222");
-        var demoTenantId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
         // 2. Tenants Oficiales
         // 2.1 Administrador Central
@@ -360,27 +359,7 @@ public class ApplicationDbContextInitialiser
             partnerTenant.Activar();
         }
 
-        // 2.3 Cliente Demo (Solo en ambiente local SQLite para pruebas)
-        if (_context.Database.IsSqlite())
-        {
-            var demoTenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == demoTenantId);
-            if (demoTenant == null)
-            {
-                demoTenant = Tenant.Crear(
-                    nombre: "PRUEBAS SAAS FACTURACION",
-                    partnerId: partnerTenantId,
-                    id: demoTenantId,
-                    estado: TenantEstados.Activo
-                );
-                _context.Tenants.Add(demoTenant);
-            }
-            else if (demoTenant.Estado != TenantEstados.Activo)
-            {
-                demoTenant.Activar();
-            }
-        }
-
-        await _context.SaveChangesAsync();
+       await _context.SaveChangesAsync();
 
         // 3. Usuarios Oficiales
         // 3.1 Super Administrador
@@ -427,27 +406,6 @@ public class ApplicationDbContextInitialiser
             await _userManager.UpdateAsync(existingPartner);
         }
 
-        // 3.3 Cliente Demo (Solo en ambiente local SQLite)
-        if (_context.Database.IsSqlite())
-        {
-            var existingCliente = await _userManager.FindByNameAsync("cliente@localhost");
-            if (existingCliente == null)
-            {
-                var clienteUser = new ApplicationUser
-                {
-                    UserName = "cliente@localhost",
-                    Email = "cliente@localhost",
-                    TenantId = demoTenantId
-                };
-                await _userManager.CreateAsync(clienteUser, "Cliente123!");
-            }
-            else if (existingCliente.TenantId != demoTenantId)
-            {
-                existingCliente.TenantId = demoTenantId;
-                await _userManager.UpdateAsync(existingCliente);
-            }
-        }
-
         // 4. Catálogo de Planes Oficiales
         var planMigracionSistema = await _context.Planes.FirstOrDefaultAsync(p => p.Codigo == "MIGRACION_SISTEMA");
         if (planMigracionSistema == null)
@@ -459,7 +417,7 @@ public class ApplicationDbContextInitialiser
                 precioMensual: 3.00m,
                 precioAnual: 20.00m,
                 maxDocumentosMensuales: null,
-                maxDocumentosAnuales: 100,
+                maxDocumentosAnuales: 300,
                 maxEstablecimientos: 1,
                 tiposDocumentosPermitidos: "01,04,05",
                 esPublico: true
@@ -469,7 +427,30 @@ public class ApplicationDbContextInitialiser
         else
         {
             planMigracionSistema.ActualizarPrecios(3.00m, 20.00m);
-            planMigracionSistema.ActualizarLimites(null, 100, 1, "01,04,05");
+            planMigracionSistema.ActualizarLimites(null, 300, 1, "01,04,05");
+        }
+        // 4.1. Catálogo de Planes Oficiales
+        var planComercioPro = await _context.Planes.FirstOrDefaultAsync(p => p.Codigo == "PLAN_COMERCIO_PRO");
+        if (planComercioPro == null)
+        {
+            planComercioPro = Plan.Crear(
+                codigo: "PLAN_COMERCIO_PRO",
+                nombre: "Plan Comercio Pro",
+                descripcion: "Diseñado para negocios y comercios con emisión diaria frecuente. Incluye facturas, notas de crédito y notas de débito con amplio margen anual.",
+                precioMensual: 6.00m,
+                precioAnual: 45.00m,
+                maxDocumentosMensuales: null,
+                maxDocumentosAnuales: 1500, // Margen holgado para cubrir su ritmo histórico
+                maxEstablecimientos: 1,
+                tiposDocumentosPermitidos: "01,04,05",
+                esPublico: true // Puede ser público para nuevos clientes con este volumen
+            );
+            _context.Planes.Add(planComercioPro);
+        }
+        else
+        {
+            planComercioPro.ActualizarPrecios(6.00m, 45.00m);
+            planComercioPro.ActualizarLimites(null, 1500, 1, "01,04,05");
         }
 
         var planMigracionFirma = await _context.Planes.FirstOrDefaultAsync(p => p.Codigo == "MIGRACION_FIRMA");
@@ -482,7 +463,7 @@ public class ApplicationDbContextInitialiser
                 precioMensual: 5.00m,
                 precioAnual: 45.00m,
                 maxDocumentosMensuales: null,
-                maxDocumentosAnuales: 100,
+                maxDocumentosAnuales: 300,
                 maxEstablecimientos: 1,
                 tiposDocumentosPermitidos: "01,04,05",
                 esPublico: true
@@ -492,7 +473,7 @@ public class ApplicationDbContextInitialiser
         else
         {
             planMigracionFirma.ActualizarPrecios(5.00m, 45.00m);
-            planMigracionFirma.ActualizarLimites(null, 100, 1, "01,04,05");
+            planMigracionFirma.ActualizarLimites(null, 300, 1, "01,04,05");
         }
 
         var planCortesiaPartner = await _context.Planes.FirstOrDefaultAsync(p => p.Codigo == "PLAN_CORTESIA_PARTNER");
@@ -529,16 +510,6 @@ public class ApplicationDbContextInitialiser
                 esPublico: false
             );
             _context.Planes.Add(planAdminSistema);
-        }
-
-        // Desactivar cualquier otro plan obsoleto
-        var codigosValidos = new[] { "MIGRACION_SISTEMA", "MIGRACION_FIRMA", "PLAN_CORTESIA_PARTNER", "PLAN_ADMIN_SISTEMA" };
-        var otrosPlanes = await _context.Planes
-            .Where(p => !codigosValidos.Contains(p.Codigo) && p.Activo)
-            .ToListAsync();
-        foreach (var p in otrosPlanes)
-        {
-            p.Desactivar();
         }
 
         await _context.SaveChangesAsync();
@@ -583,50 +554,7 @@ public class ApplicationDbContextInitialiser
             );
             _context.Emisores.Add(emisorPartner);
         }
-        else
-        {
-            emisorPartner.ActualizarDatosTributarios(
-                ruc: "1790016919001",
-                razonSocial: "Gorky",
-                direccionMatriz: emisorPartner.DireccionMatriz,
-                nombreComercial: "Gorky",
-                direccionEstablecimiento: emisorPartner.DireccionEstablecimiento,
-                codigoEstablecimiento: emisorPartner.CodigoEstablecimiento,
-                puntoEmision: emisorPartner.PuntoEmision,
-                ambiente: emisorPartner.Ambiente,
-                obligadoContabilidad: emisorPartner.ObligadoContabilidad,
-                regimenRimpe: emisorPartner.RegimenRimpe,
-                contribuyenteEspecial: emisorPartner.ContribuyenteEspecial
-            );
-        }
-
-        // 5.3 Emisor Demo (Solo en SQLite, garantizando certificado en blanco)
-        if (_context.Database.IsSqlite())
-        {
-            var emisorDemo = await _context.Emisores.FirstOrDefaultAsync(e => e.TenantId == demoTenantId);
-            if (emisorDemo == null)
-            {
-                emisorDemo = Emisor.Crear(
-                    tenantId: demoTenantId,
-                    ruc: "1790016919001",
-                    razonSocial: "PRUEBAS SAAS FACTURACION",
-                    direccionMatriz: "Quito - Ecuador",
-                    codigoEstablecimiento: "001",
-                    puntoEmision: "001",
-                    ambiente: 1,
-                    obligadoContabilidad: false,
-                    nombreComercial: "FACTURACION SAAS DEMO",
-                    regimenRimpe: "CONTRIBUYENTE RÉGIMEN RIMPE",
-                    secuencialInicial: 0
-                );
-                _context.Emisores.Add(emisorDemo);
-            }
-            else if (emisorDemo.TieneCertificadoValido())
-            {
-                // Purga cualquier certificado de prueba residual
-                emisorDemo.EliminarCertificado();
-            }
-        }
+        
 
         // 6. Suscripciones Activas
         // 6.1 Administrador Central
@@ -655,20 +583,6 @@ public class ApplicationDbContextInitialiser
                 diasGracia: 3
             );
             _context.Suscripciones.Add(suscripcionPartner);
-        }
-
-        // 6.3 Cliente Demo (Solo en SQLite)
-        if (_context.Database.IsSqlite() && !await _context.Suscripciones.AnyAsync(s => s.TenantId == demoTenantId))
-        {
-            var suscripcionDemo = TenantSubscription.Crear(
-                tenantId: demoTenantId,
-                planId: planMigracionSistema.Id,
-                fechaInicio: DateTime.UtcNow.AddMonths(-1),
-                fechaVencimiento: DateTime.UtcNow.AddMonths(11),
-                frecuencia: "ANUAL",
-                diasGracia: 3
-            );
-            _context.Suscripciones.Add(suscripcionDemo);
         }
 
         await _context.SaveChangesAsync();

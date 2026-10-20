@@ -6,6 +6,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using BillingSaaS.Application.Common.Interfaces;
+using BillingSaaS.Domain.Constants;
 using BillingSaaS.Domain.Entities;
 
 namespace BillingSaaS.Infrastructure.Servicios;
@@ -53,7 +54,7 @@ public class NotaDebitoXmlGenerator : INotaDebitoXmlGenerator
                     new XElement("ptoEmi", notaDebito.PuntoEmision),
                     new XElement("secuencial", notaDebito.Secuencial),
                     new XElement("dirMatriz", notaDebito.DireccionMatriz),
-                    !string.IsNullOrWhiteSpace(notaDebito.ContribuyenteRimpe)
+                    !string.IsNullOrWhiteSpace(notaDebito.ContribuyenteRimpe) && RegimenRimpeTipos.EsRimpe(notaDebito.ContribuyenteRimpe)
                         ? new XElement("contribuyenteRimpe", notaDebito.ContribuyenteRimpe)
                         : null
                 ),
@@ -110,6 +111,10 @@ public class NotaDebitoXmlGenerator : INotaDebitoXmlGenerator
 
                 // 4. INFORMACIÓN ADICIONAL
                 new XElement("infoAdicional",
+                    new XElement("campoAdicional",
+                        new XAttribute("nombre", "Regimen"),
+                        RegimenRimpeTipos.ResolverParaRide(notaDebito.ContribuyenteRimpe)
+                    ),
                     !string.IsNullOrWhiteSpace(notaDebito.Cliente?.CorreoElectronico)
                         ? new XElement("campoAdicional",
                             new XAttribute("nombre", "Email"),
