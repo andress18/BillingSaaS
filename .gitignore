@@ -17,7 +17,6 @@
 mono_crash.*
 
 # Build results
-src\MigrationTool
 tools/
 [Dd]ebug/
 [Dd]ebugPublic/
@@ -497,3 +496,6 @@ appsettings.*.local.json
 
 # Migration Tool sensitive files
 src/MigrationTool/*.csv
+!src/MigrationTool/*.example.csv
+*.local.json
+appsettings.Production.json
