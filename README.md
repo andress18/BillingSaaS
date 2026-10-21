@@ -1,4 +1,10 @@
-# BillingSaaS – Plataforma SaaS Multi-tenant de Facturación Electrónica (.NET 10 & Cloud Native)
+# BillingSaaS – Multi-tenant Cloud-Native Electronic Invoicing Platform (.NET 10)
+
+<p align="left">
+  <strong>Language / Idioma:</strong> 
+  <strong>🇺🇸 English</strong> | 
+  <a href="README.es.md">🇪🇸 Español</a>
+</p>
 
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![C#](https://img.shields.io/badge/C%23-13-239120?logo=csharp&logoColor=white)](https://docs.microsoft.com/en-us/dotnet/csharp/)
@@ -7,15 +13,18 @@
 [![Azure Functions](https://img.shields.io/badge/Azure-Functions-0062AD?logo=azurefunctions&logoColor=white)](https://azure.microsoft.com/services/functions/)
 [![Tests](https://img.shields.io/badge/Tests->150%20Passed-brightgreen)](tests/)
 
-Plataforma empresarial multi-tenant desarrollada en **.NET 10** para la emisión, validación, firma digital criptográfica y autorización de comprobantes tributarios electrónicos (Facturas, Notas de Crédito, Notas de Débito) en cumplimiento con el **Servicio de Rentas Internas (SRI)** de Ecuador.
+An enterprise-grade, cloud-native multi-tenant platform built with **.NET 10** for the generation, validation, cryptographic digital signing, and official authorization of electronic tax documents (Invoices, Credit Notes, Debit Notes) complying with the regulatory requirements of Ecuador's Internal Revenue Service (**SRI - Servicio de Rentas Internas**).
 
-El proyecto está diseñado bajo principios de **Clean Architecture**, **CQRS (MediatR)**, observabilidad distribuida con **.NET Aspire / OpenTelemetry**, microservicios serverless en **Azure Functions** y un motor de cifrado simétrico autenticado **AES-GCM** para protección de certificados digitales en reposo.
+Architected following **Clean Architecture**, **CQRS with MediatR**, distributed observability with **.NET Aspire / OpenTelemetry**, serverless offloading via **Azure Functions**, and authenticated symmetric encryption (**AES-GCM 256-bit**) for securing digital certificates at rest.
+
+🔗 **Live Production API Documentation (Scalar):**  
+👉 [https://facturafacil-gudhbdfpcagba9e5.westus2-01.azurewebsites.net/scalar/](https://facturafacil-gudhbdfpcagba9e5.westus2-01.azurewebsites.net/scalar/)
 
 ---
 
-## 🏗️ Arquitectura del Sistema
+## 🏗️ System Architecture
 
-El sistema implementa una arquitectura por capas desacoplada basada en Clean Architecture y Domain-Driven Design (DDD):
+The solution implements a decoupled, layered architecture based on Clean Architecture and Domain-Driven Design (DDD):
 
 ```mermaid
 graph TD
@@ -61,54 +70,54 @@ graph TD
     Aspire -.-> Func
 ```
 
-### Proyectos de la Solución
+### Solution Structure
 
-* **`src/Domain`**: Entidades centrales (`Factura`, `NotaCredito`, `NotaDebito`, `Emisor`, `Comprador`, `Tenant`, `TenantSubscription`, `Plan`), reglas de negocio de cálculo de impuestos (RIMPE, IVA con precisión de 6 decimales) y eventos de dominio.
-* **`src/Application`**: Casos de uso implementados mediante CQRS con MediatR. Validaciones automáticas en pipeline con FluentValidation, mapeos y servicios de autorización multi-inquilino.
-* **`src/Infrastructure`**: Acceso a datos con Entity Framework Core 10 (SQL Server y SQLite), interceptores de auditoría y despacho de eventos de dominio, integración SOAP con web services del SRI, generador y firmador digital **XAdES-BES** y servicio de cifrado **AES-GCM**.
-* **`src/Web`**: Endpoints HTTP Minimal APIs optimizados, autenticación basada en Identity & Claims con soporte multi-tenant, y documentación interactiva moderna con **Scalar**.
-* **`src/Functions`**: Microservicio serverless en **Azure Functions** aislado para la generación masiva de representaciones impresas (RIDE PDF) con QuestPDF y códigos de barra SVG.
-* **`src/AppHost` & `src/ServiceDefaults`**: Orquestación cloud-native con **.NET Aspire**, integrando métricas, trazas distribuidas, health checks y resiliencia de red.
-
----
-
-## 🚀 Características Principales
-
-### 1. Facturación Electrónica Integral (SRI Ecuador)
-* Generación de comprobantes XML según fichas técnicas oficiales (v1.1.0 / v1.0.0).
-* Generación de clave de acceso de 49 dígitos con algoritmo Módulo 11.
-* Firma digital electrónica en formato **XAdES-BES** utilizando certificados `.p12` / `.pfx` (`System.Security.Cryptography.Pkcs` / `Xml`).
-* Consumo resiliente de web services SOAP de Recepción y Autorización del SRI.
-* Generación de reportes PDF RIDE de alta fidelidad con códigos de barra y QR interactivo.
-
-### 2. Multi-tenancy & Gestión de Suscripciones
-* Aislamiento de datos por inquilino (`TenantId`).
-* Control granular de planes (Básico, Emprendedor, Pro, Corporativo) y límites de emisión de comprobantes.
-* Ciclo de vida y estados de inquilinos (`ACTIVO`, `SUSPENDIDO`, `VENCIDO`, `PERIODO_GRACIA`).
-* Flujo de renovación y aprobación de solicitudes de suscripción.
-
-### 3. Seguridad y Criptografía
-* **Cifrado en reposo:** Certificados digitales `.p12` y contraseñas tributarias protegidos en base de datos mediante cifrado autenticado **AES-GCM (256-bit)**.
-* **Aislamiento de Identidad:** Tokens JWT con claims de `TenantId` y roles (`Administrador`, `Partner`, `Cliente`).
-* **Secret Management:** Gestión de secretos mediante User Secrets en desarrollo y variables de entorno / Azure Key Vault en producción.
-
-### 4. Observabilidad y Resiliencia Cloud-Native
-* Integración profunda con **.NET Aspire** y **OpenTelemetry** para trazas distribuidas entre el API y Azure Functions.
-* Resiliencia HTTP (`Microsoft.Extensions.Http.Resilience`) con políticas de reintento ante caídas intermitentes de los web services gubernamentales del SRI.
-* Health Checks automatizados para base de datos y endpoints de emisión.
+* **`src/Domain`**: Core domain model (`Factura`, `NotaCredito`, `NotaDebito`, `Emisor`, `Comprador`, `Tenant`, `TenantSubscription`, `Plan`), tax calculation business rules (RIMPE tax regimes, VAT calculations with 6-decimal precision), and Domain Events.
+* **`src/Application`**: Use cases implemented via CQRS with MediatR. Pipeline behaviors for FluentValidation, AutoMapper projections, and tenant authorization services.
+* **`src/Infrastructure`**: Data access using Entity Framework Core 10 (SQL Server and SQLite support), automatic auditing and domain event dispatching interceptors, SRI SOAP web services integration, **XAdES-BES** digital signer, and **AES-GCM** encryption services.
+* **`src/Web`**: High-performance Minimal API endpoints, ASP.NET Core Identity with Tenant Claims and Role-Based Access Control (RBAC), and interactive API documentation powered by **Scalar**.
+* **`src/Functions`**: Serverless isolated worker microservice in **Azure Functions** for decoupled, high-throughput PDF generation (RIDE) using QuestPDF and Barcoder SVG.
+* **`src/AppHost` & `src/ServiceDefaults`**: Cloud-native orchestration via **.NET Aspire**, managing service discovery, distributed health checks, and OpenTelemetry instrumentation.
 
 ---
 
-## 🧪 Pruebas Automatizadas
+## 🚀 Key Features
 
-La solución cuenta con una suite completa de pruebas automatizadas:
+### 1. Comprehensive Electronic Invoicing (SRI Ecuador)
+* Compliant XML invoice generation according to official government technical specifications (v1.1.0 / v1.0.0).
+* 49-digit numerical access key (*Clave de Acceso*) generation with Modulo 11 check digit verification.
+* **XAdES-BES** digital signature implementation using PKCS#12 (`.p12`/`.pfx`) certificates via `System.Security.Cryptography.Pkcs` and `Xml`.
+* Resilient SOAP client integration with official SRI Reception and Authorization endpoints.
+* High-fidelity RIDE (*Representación Impresa de Documento Electrónico*) PDF generation with dynamic barcodes and QR codes.
 
-* **Domain Unit Tests**: Validación de invariantes de entidades, cálculo tributario y generación de clave de acceso.
-* **Application Unit Tests**: Pruebas de casos de uso (Commands/Queries), validadores FluentValidation y mocks de servicios externos.
-* **Infrastructure Integration Tests**: Pruebas de generadores XML, firma digital, cifrado AES-GCM y servicios SRI.
-* **Functional API Tests**: Pruebas de integración de extremo a extremo con `WebApplicationFactory` y reseteo de base de datos con `Respawn`.
+### 2. Multi-Tenancy & Subscription Management
+* Strict data isolation by tenant identifier (`TenantId`).
+* Tiered subscription plans (Basic, Entrepreneur, Pro, Corporate) with document emission quotas and tracking.
+* Tenant lifecycle state machine (`ACTIVO`, `SUSPENDIDO`, `VENCIDO`, `PERIODO_GRACIA`).
+* Self-service subscription renewal request and approval workflows.
 
-Para ejecutar las pruebas:
+### 3. Enterprise Security & Cryptography
+* **Data Protection at Rest:** Sensitive tenant PKCS#12 certificates and tax passwords are encrypted in the database using authenticated symmetric encryption **AES-GCM (256-bit)**.
+* **Identity & Access Management:** JWT tokens embedded with multi-tenant claims (`TenantId`) and role separation (`Administrador`, `Partner`, `Cliente`).
+* **Secret Management:** Strict separation of environment configurations using .NET User Secrets in development and Azure Key Vault / Environment Variables in staging and production.
+
+### 4. Cloud-Native Observability & Resilience
+* End-to-end distributed tracing across API calls and serverless functions via **.NET Aspire** and **OpenTelemetry**.
+* Transient fault handling and retry policies powered by `Microsoft.Extensions.Http.Resilience` for external government web services.
+* Automated health checks for database connectivity and external service availability.
+
+---
+
+## 🧪 Automated Testing
+
+The solution includes an extensive automated test suite with over **150 tests**:
+
+* **Domain Unit Tests**: Verification of entity invariants, tax calculation precision, and access key algorithms.
+* **Application Unit Tests**: CQRS command and query handler validation, FluentValidation pipeline rules, and external service mocking.
+* **Infrastructure Integration Tests**: Real XML generation, digital signature verification, AES-GCM encryption/decryption, and SRI SOAP service tests.
+* **Functional API Tests**: End-to-end HTTP integration tests leveraging `WebApplicationFactory` and database state resetting with `Respawn`.
+
+To run the test suite:
 
 ```bash
 dotnet test
@@ -116,52 +125,52 @@ dotnet test
 
 ---
 
-## 💻 Ejecución Local
+## 💻 Local Development & Setup
 
-### Prerrequisitos
+### Prerequisites
 * [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-* [Docker Desktop](https://www.docker.com/) (opcional, para ejecutar con contenedores mediante Aspire)
+* [Docker Desktop](https://www.docker.com/) (optional, for running containerized dependencies with Aspire)
 
-### Pasos para iniciar
+### Getting Started
 
-1. **Clonar el repositorio:**
+1. **Clone the repository:**
    ```bash
    git clone https://github.com/andress18/BillingSaaS.git
    cd BillingSaaS
    ```
 
-2. **Restaurar paquetes y compilar:**
+2. **Restore dependencies and build:**
    ```bash
    dotnet build
    ```
 
-3. **Ejecutar con .NET Aspire (Recomendado):**
+3. **Run with .NET Aspire (Recommended):**
    ```bash
    dotnet run --project src/AppHost
    ```
-   El dashboard interactivo de Aspire se abrirá automáticamente en tu navegador mostrando las URLs activas, métricas y trazas en tiempo real.
+   The interactive Aspire Dashboard will launch automatically in your default browser, providing real-time telemetry, service logs, and endpoint links.
 
-4. **Acceder a la documentación de la API:**
-   Una vez iniciada la aplicación Web, navega a:
+4. **Access the API Documentation:**
+   Once running, access the interactive Scalar API documentation at:
    ```
    https://localhost:5001/scalar
    ```
 
 ---
 
-## 🛠️ Stack Tecnológico
+## 🛠️ Tech Stack & Libraries
 
-| Capa / Área | Tecnología |
+| Layer / Concern | Technology |
 | :--- | :--- |
 | **Framework** | .NET 10 (C# 13) |
-| **Arquitectura** | Clean Architecture, CQRS, DDD, Multi-tenancy |
-| **Acceso a Datos** | Entity Framework Core 10, SQL Server, SQLite |
-| **Patrón CQRS** | MediatR, FluentValidation |
-| **Criptografía** | System.Security.Cryptography.Pkcs/Xml (XAdES-BES), AES-GCM 256 |
-| **Documentos** | QuestPDF, Barcoder SVG |
-| **Microservicios** | Azure Functions (Isolated Worker) |
-| **Orquestación** | .NET Aspire (Hosting, Service Discovery, Health Checks) |
-| **Observabilidad** | OpenTelemetry (Metrics, Traces, Exporters) |
-| **Documentación** | Scalar (OpenAPI) |
+| **Architecture** | Clean Architecture, CQRS, DDD, Multi-tenancy |
+| **Data Access** | Entity Framework Core 10, SQL Server, SQLite |
+| **CQRS & Validation** | MediatR, FluentValidation |
+| **Cryptography** | System.Security.Cryptography.Pkcs/Xml (XAdES-BES), AES-GCM 256-bit |
+| **Reporting & Docs** | QuestPDF, Barcoder SVG |
+| **Serverless** | Azure Functions (Isolated Worker Model) |
+| **Orchestration** | .NET Aspire (Hosting, Service Discovery, Health Checks) |
+| **Observability** | OpenTelemetry (Metrics, Traces, Structured Logs) |
+| **API Documentation** | Scalar (OpenAPI) |
 | **Testing** | NUnit, Shouldly, Moq, Respawn, WebApplicationFactory |
-| **CI/CD** | GitHub Actions (Azure Web Apps & Azure Functions) |
+| **DevOps & CI/CD** | GitHub Actions (Azure Web Apps & Azure Functions) |
