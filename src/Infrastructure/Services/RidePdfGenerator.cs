@@ -27,15 +27,15 @@ public class RidePdfGenerator : IRidePdfGenerator
         QuestPDF.Settings.License = LicenseType.Community;
     }
 
-    public RidePdfGenerator(string rucProveedor = "1790016919001", string nombreProveedor = "Factura Fácil")
+    public RidePdfGenerator(string rucProveedor, string nombreProveedor)
     {
-        _rucProveedor = string.IsNullOrWhiteSpace(rucProveedor) ? "1790016919001" : rucProveedor;
-        _nombreProveedor = string.IsNullOrWhiteSpace(nombreProveedor) ? "Factura Fácil" : nombreProveedor;
+        _rucProveedor = rucProveedor;
+        _nombreProveedor = nombreProveedor;
     }
 
     public RidePdfGenerator(IConfiguration configuration)
-        : this(configuration?["ProveedorLegacyDb_Dev:Ruc"] ?? "1790016919001",
-               configuration?["ProveedorLegacyDb_Dev:Nombre"] ?? "Factura Fácil")
+        : this(configuration["ProveedorFacturacion:Ruc"]!,
+               configuration["ProveedorFacturacion:Nombre"]!)
     {
     }
 

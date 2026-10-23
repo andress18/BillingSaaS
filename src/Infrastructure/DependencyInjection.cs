@@ -84,8 +84,8 @@ public static class DependencyInjection
         builder.Services.AddTransient<IIdentityService, IdentityService>();
 
         // Proveedor de Facturación (Software y RUC Anexo 26 SRI)
-        var rucProveedor = builder.Configuration["ProveedorLegacyDb_Dev:Ruc"] ?? "1790016919001";
-        var nombreProveedor = builder.Configuration["ProveedorLegacyDb_Dev:Nombre"] ?? "Factura Fácil";
+        var rucProveedor = builder.Configuration["ProveedorFacturacion:Ruc"]!;
+        var nombreProveedor = builder.Configuration["ProveedorFacturacion:Nombre"]!;
 
         // Servicios de Facturación y Firma SRI
         builder.Services.AddTransient<IFacturaXmlGenerator>(_ => new FacturaXmlGenerator(rucProveedor));

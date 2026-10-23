@@ -25,8 +25,8 @@ public class RemoteRidePdfGenerator : IRidePdfGenerator
     {
         _httpClient = httpClient;
         _logger = logger;
-        _rucProveedor = configuration["ProveedorLegacyDb_Dev:Ruc"] ?? "1790016919001";
-        _nombreProveedor = configuration["ProveedorLegacyDb_Dev:Nombre"] ?? "Factura Fácil";
+        _rucProveedor = configuration["ProveedorFacturacion:Ruc"]!;
+        _nombreProveedor = configuration["ProveedorFacturacion:Nombre"]!;
         _localGenerator = new RidePdfGenerator(_rucProveedor, _nombreProveedor);
 
         var url = configuration["AzureFunctions:PdfServiceUrl"]?.TrimEnd('/');
