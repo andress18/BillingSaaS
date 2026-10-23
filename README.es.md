@@ -174,3 +174,4 @@ dotnet test
 | **Documentación** | Scalar (OpenAPI) |
 | **Testing** | NUnit, Shouldly, Moq, Respawn, WebApplicationFactory |
 | **CI/CD** | GitHub Actions (Azure Web Apps & Azure Functions) |
+
