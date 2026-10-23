@@ -498,3 +498,4 @@ appsettings.*.local.json
 src/MigrationTool/
 *.local.json
 appsettings.Production.json
+tests/Infrastructure.IntegrationTests/MigrationToolServicesTests.cs
