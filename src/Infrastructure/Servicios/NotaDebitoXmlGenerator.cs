@@ -24,7 +24,7 @@ public class NotaDebitoXmlGenerator : INotaDebitoXmlGenerator
     private readonly string _rucProveedor;
     private readonly string _nombreProveedor;
 
-    public NotaDebitoXmlGenerator(string rucProveedor, string nombreProveedor)
+    public NotaDebitoXmlGenerator(string rucProveedor, string nombreProveedor = "Tributífico")
     {
         _rucProveedor = rucProveedor;
         _nombreProveedor = nombreProveedor;

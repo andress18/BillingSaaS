@@ -18,7 +18,7 @@ An enterprise-grade, cloud-native multi-tenant platform built with **.NET 10** f
 Architected following **Clean Architecture**, **CQRS with MediatR**, distributed observability with **.NET Aspire / OpenTelemetry**, serverless offloading via **Azure Functions**, and authenticated symmetric encryption (**AES-GCM 256-bit**) for securing digital certificates at rest.
 
 🔗 **Live Production API Documentation (Scalar):**  
-👉 [https://facturafacil-gudhbdfpcagba9e5.westus2-01.azurewebsites.net/scalar/](https://facturafacil-gudhbdfpcagba9e5.westus2-01.azurewebsites.net/scalar/)
+👉 [https://api.tributifico.com/scalar/](https://api.tributifico.com/scalar/)
 
 ---
 

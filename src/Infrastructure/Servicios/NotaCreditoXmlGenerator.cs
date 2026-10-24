@@ -22,7 +22,7 @@ public class NotaCreditoXmlGenerator : INotaCreditoXmlGenerator
     private readonly string _rucProveedor;
     private readonly string _nombreProveedor;
 
-    public NotaCreditoXmlGenerator(string rucProveedor, string nombreProveedor)
+    public NotaCreditoXmlGenerator(string rucProveedor, string nombreProveedor = "Tributífico")
     {
         _rucProveedor = rucProveedor;
         _nombreProveedor = nombreProveedor;

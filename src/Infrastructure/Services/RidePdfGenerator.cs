@@ -20,22 +20,22 @@ namespace BillingSaaS.Infrastructure.Services;
 public class RidePdfGenerator : IRidePdfGenerator
 {
     private readonly string _rucProveedor;
-    private readonly string _nombreProveedor;
+    private readonly string? _nombreProveedor;
 
     static RidePdfGenerator()
     {
         QuestPDF.Settings.License = LicenseType.Community;
     }
 
-    public RidePdfGenerator(string rucProveedor, string nombreProveedor)
+    public RidePdfGenerator(string? rucProveedor = null, string? nombreProveedor = null)
     {
-        _rucProveedor = rucProveedor;
+        _rucProveedor = !string.IsNullOrWhiteSpace(rucProveedor) ? rucProveedor : "0957790108001";
         _nombreProveedor = nombreProveedor;
     }
 
     public RidePdfGenerator(IConfiguration configuration)
-        : this(configuration["ProveedorFacturacion:Ruc"]!,
-               configuration["ProveedorFacturacion:Nombre"]!)
+        : this(configuration?["ProveedorFacturacion:Ruc"],
+               configuration?["ProveedorFacturacion:Nombre"])
     {
     }
 
@@ -381,7 +381,11 @@ public class RidePdfGenerator : IRidePdfGenerator
                                     {
                                         if (campo.Nombre.Equals("Email", StringComparison.OrdinalIgnoreCase) ||
                                             campo.Nombre.Equals("Dirección", StringComparison.OrdinalIgnoreCase) ||
-                                            campo.Nombre.Equals("Direccion", StringComparison.OrdinalIgnoreCase))
+                                            campo.Nombre.Equals("Direccion", StringComparison.OrdinalIgnoreCase) ||
+                                            campo.Nombre.Equals("Software", StringComparison.OrdinalIgnoreCase) ||
+                                            campo.Nombre.Equals("Software Proveedor", StringComparison.OrdinalIgnoreCase) ||
+                                            campo.Nombre.Equals("RUC Proveedor", StringComparison.OrdinalIgnoreCase) ||
+                                            campo.Nombre.Equals("RUC Proveedor Software", StringComparison.OrdinalIgnoreCase))
                                         {
                                             continue;
                                         }
@@ -394,8 +398,12 @@ public class RidePdfGenerator : IRidePdfGenerator
                                     }
                                 }
 
-                                // Leyenda técnica de software / Anexo 26 SRI
-                                adicionalBox.Item().PaddingTop(3).Text($"Software: {_nombreProveedor} (RUC Proveedor: {_rucProveedor} - Anexo 26)").FontSize(7f).FontColor(Colors.Grey.Darken2);
+                                // Leyenda técnica de software / Anexo 26 SRI (solo RUC del proveedor, sin nombre de software)
+                                var rucProvFactura = !string.IsNullOrWhiteSpace(factura.RucProveedor) ? factura.RucProveedor : _rucProveedor;
+                                if (!string.IsNullOrWhiteSpace(rucProvFactura))
+                                {
+                                    adicionalBox.Item().PaddingTop(3).Text($"RUC Proveedor: {rucProvFactura}").FontSize(7f).FontColor(Colors.Grey.Darken2);
+                                }
                             });
 
                             // Cuadro de Formas de Pago
@@ -799,8 +807,12 @@ public class RidePdfGenerator : IRidePdfGenerator
                                     t.Span(regimenTributario);
                                 });
 
-                                // Leyenda técnica de software / Anexo 26 SRI
-                                infoAdicional.Item().PaddingTop(3).Text($"Software: {_nombreProveedor} (RUC Proveedor: {_rucProveedor} - Anexo 26)").FontSize(7f).FontColor(Colors.Grey.Darken2);
+                                // Leyenda técnica de software / Anexo 26 SRI (solo RUC del proveedor, sin nombre de software)
+                                var rucProvNd = !string.IsNullOrWhiteSpace(notaDebito.RucProveedor) ? notaDebito.RucProveedor : _rucProveedor;
+                                if (!string.IsNullOrWhiteSpace(rucProvNd))
+                                {
+                                    infoAdicional.Item().PaddingTop(3).Text($"RUC Proveedor: {rucProvNd}").FontSize(7f).FontColor(Colors.Grey.Darken2);
+                                }
                             });
 
                             if (notaDebito.Pagos.Any())
@@ -1140,8 +1152,12 @@ public class RidePdfGenerator : IRidePdfGenerator
                                     t.Span(regimenTributario);
                                 });
 
-                                // Leyenda técnica de software / Anexo 26 SRI
-                                box.Item().PaddingTop(3).Text($"Software: {_nombreProveedor} (RUC Proveedor: {_rucProveedor} - Anexo 26)").FontSize(7f).FontColor(Colors.Grey.Darken2);
+                                // Leyenda técnica de software / Anexo 26 SRI (solo RUC del proveedor, sin nombre de software)
+                                var rucProvNc = !string.IsNullOrWhiteSpace(notaCredito.RucProveedor) ? notaCredito.RucProveedor : _rucProveedor;
+                                if (!string.IsNullOrWhiteSpace(rucProvNc))
+                                {
+                                    box.Item().PaddingTop(3).Text($"RUC Proveedor: {rucProvNc}").FontSize(7f).FontColor(Colors.Grey.Darken2);
+                                }
                             });
                         });
 
